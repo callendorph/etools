@@ -1,0 +1,16 @@
+#use-added-syntax(jitx)
+defpackage etools/jitx/ESeries :
+  import core
+  import jitx
+  import etools/ESeries
+
+; Find the closest value matching the passed `v` parameter and then 
+;   return a Toleranced value that includes the series value and its
+;   associated tolerances.
+public defmulti find-toleranced (self:ESeries, v:Double) -> Toleranced
+
+public defmethod find-toleranced (self:ESeries, v:Double) -> Toleranced :
+  ; Find the nearest resistor value and return as a toleranced
+  ;   value. 
+  val nearVal = find-nearest(self, v)
+  tol%(nearVal, 100.0 * series-tolerance(self))

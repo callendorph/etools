@@ -1,0 +1,232 @@
+#use-added-syntax(tests)
+defpackage etools/ESeries/tests : 
+  import core
+  import collections
+  import etools/ESeries
+
+; Used for testing floating point numbers to check
+;   for "equality"
+val epsilon = 1.0e-3
+
+#if-defined(TESTING) :
+  defn almost-equal (obs, exp, epsilon:Double) -> True|False :
+    abs(obs - exp) < epsilon
+
+  defn check-not-equal (obs, exp, epsilon:Double) -> List<String> :
+    ; Check two sequences for equality within epsilon
+    var faults = List()
+    for i in 0 to length(exp) do : 
+      if not almost-equal(obs[i], exp[i], epsilon) : 
+        faults = cons(to-string("FAIL: %_ != %_ index=%_" % [obs[i], exp[i], i]), faults)
+    faults
+
+  defn expect-throw (f) -> [True|False, String] :
+    try :
+      val unexpected = f()
+      [false, "No Exception Thrown"]
+    catch (e:InvalidValue) :
+      val buf = StringBuffer(128) 
+      print(buf, e)
+      val msg = to-string(buf) 
+      [true, msg]
+
+deftest round-places-tests :
+
+  val testVecs = [
+    [1.37, 2, 1.4],
+    [1.37532, 4, 1.375],
+    [2.376, 3, 2.38],
+  ]
+
+  for testVec in testVecs do :
+    val [inVal, places, expVal] = testVec 
+    val obsVal = round-places(inVal, places)
+    #EXPECT(expVal == obsVal)
+
+  val failVecs = [
+    [{round-places(200.5, 3)}, "Expects v < 10.0 : 200.5 < 10.0"]
+    [{round-places(2.5, -3)}, "Expects places > 0 : -3 > 0"]
+  ]
+
+  for failVec in failVecs do : 
+    ; Test that exceptions throw in the way we expect
+    val [f, msgClip] = failVec
+    val [throws, msg] = expect-throw(f)
+    #EXPECT(throws)
+    #EXPECT(index-of-chars(msg, "Invalid Value") != false)
+    #EXPECT(index-of-chars(msg, msgClip) != false)
+
+deftest rounded-log10-test :
+  ; Test that exceptions throw in the way we expect
+
+  val failVecs = [
+    [{rounded-log10( 12, 12, 2)}, "Expects v < N : 12 < 12"]
+    [{rounded-log10( -1, 12, 2)}, "Expects v >= 0 : -1 >= 0"]
+    [{rounded-log10( 0, -12, 2)}, "Expects N > 0 : -12 > 0"]
+  ]
+
+  for failVec in failVecs do : 
+    ; Test that exceptions throw in the way we expect
+    val [f, msgClip] = failVec
+    val [throws, msg] = expect-throw(f)
+    #EXPECT(throws)
+    #EXPECT(index-of-chars(msg, "Invalid Value") != false)
+    #EXPECT(index-of-chars(msg, msgClip) != false)
+
+deftest get-power-of-10-test :
+  val testVecs = [
+    [1.37, 0.0],
+    [20.45, 1.0],
+    [99.37, 1.0],
+    [200.565, 2.0],
+    [0.11, -1.0],
+    [0.0511, -2.0],
+  ]
+
+  for testVec in testVecs do :
+    val [inVal, expVal] = testVec 
+    val obsVal = get-power-of-10(inVal)
+    #EXPECT(expVal == obsVal)
+
+  val failVecs = [
+    [{get-power-of-10(0.0)}, "Expects v > 0 : 0.0 > 0"]
+    [{get-power-of-10(-1.0)}, "Expects v > 0 : -1.0 > 0"]
+  ]
+
+  for failVec in failVecs do : 
+    ; Test that exceptions throw in the way we expect
+    val [f, msgClip] = failVec
+    val [throws, msg] = expect-throw(f)
+    #EXPECT(throws)
+    #EXPECT(index-of-chars(msg, "Invalid Value") != false)
+    #EXPECT(index-of-chars(msg, msgClip) != false)
+
+
+
+
+
+deftest E12-test : 
+  val series = E12() 
+
+  #EXPECT( name(series) == "E12" )
+  #EXPECT( elements(series) == 12 )
+  #EXPECT( series-tolerance(series) == 0.10 )
+  
+  val s10 = get-series(series)
+
+  #EXPECT(length(s10) == 12)
+
+  val exp10%_10 = [
+    10.0 12.0 15.0 18.0 22.0 27.0 33.0 39.0 47.0 56.0 68.0 82.0
+  ]
+
+  val r10 = map({_ * 10.0}, s10)
+
+  val faults = check-not-equal(r10, exp10%_10, epsilon)
+
+  if length(faults) > 0: 
+    val msg = string-join(faults, "\n")
+    println("Faults: %_" % [msg])
+    #EXPECT(length(faults) == 0)
+
+  val obs = find-nearest(series, 133.23)
+  #EXPECT(obs == 120.0)
+
+deftest E24-test : 
+  val series = E24() 
+
+  #EXPECT( name(series) == "E24" )
+  #EXPECT( elements(series) == 24 )
+  #EXPECT( series-tolerance(series) == 0.05 )
+
+  val s5 = get-series(series)
+
+  #EXPECT(length(s5) == 24)
+
+  val r5 = map({_ * 10.0}, s5)
+
+  val exp5%_10_raw:Tuple<Int> = [
+    10 11 12 13 15 16 18 20 22 24 27 30
+    33 36 39 43 47 51 56 62 68 75 82 91
+  ]
+  val exp5%_10 = map(to-double, exp5%_10_raw)
+
+  val faults = check-not-equal(r5, exp5%_10, epsilon)
+  if length(faults) > 0: 
+    val msg = string-join(faults, "\n")
+    println("Faults: %_" % [msg])
+    #EXPECT(length(faults) == 0)
+
+  val obs = find-nearest(series, 133.23)
+  #EXPECT(obs == 130.0)
+
+deftest E48-test : 
+  val series = E48() 
+
+  #EXPECT( name(series) == "E48" )
+  #EXPECT( elements(series) == 48 )
+  #EXPECT( series-tolerance(series) == 0.02 )
+
+  val s2 = get-series(series)
+
+  #EXPECT(length(s2) == 48)
+
+  val exp2% = [
+    1.00, 1.05, 1.10, 1.15, 1.21, 1.27, 1.33, 1.40, 1.47, 1.54, 
+    1.62, 1.69, 1.78, 1.87, 1.96, 2.05, 2.15, 2.26, 2.37, 2.49, 
+    2.61, 2.74, 2.87, 3.01, 3.16, 3.32, 3.48, 3.65, 3.83, 4.02, 
+    4.22, 4.42, 4.64, 4.87, 5.11, 5.36, 5.62, 5.90, 6.19, 6.49, 
+    6.81, 7.15, 7.50, 7.87, 8.25, 8.66, 9.09, 9.53
+  ]
+
+  val exp2%_10 = map({_ * 10.0}, exp2%)
+
+  val r2 = map({_ * 10.0}, s2)
+
+  val faults = check-not-equal(r2, exp2%_10, epsilon)
+  if length(faults) > 0: 
+    val msg = string-join(faults, "\n")
+    println("Faults: %_" % [msg])
+    #EXPECT(length(faults) == 0)
+
+  val obs = find-nearest(series, 133.23)
+  #EXPECT(obs == 133.0)
+
+
+deftest E96-test :
+  val series = E96() 
+
+  #EXPECT( name(series) == "E96" )
+  #EXPECT( elements(series) == 96 )
+  #EXPECT( series-tolerance(series) == 0.01 )
+
+  val s1 = get-series(series)
+
+  #EXPECT(length(s1) == 96)
+
+
+  val exp1%_10 = [
+    10.0 10.2 10.5 10.7 11.0 11.3 11.5 11.8 12.1 12.4 12.7 13.0
+    13.3 13.7 14.0 14.3 14.7 15.0 15.4 15.8 16.2 16.5 16.9 17.4
+    17.8 18.2 18.7 19.1 19.6 20.0 20.5 21.0 21.5 22.1 22.6 23.2
+    23.7 24.3 24.9 25.5 26.1 26.7 27.4 28.0 28.7 29.4 30.1 30.9
+    31.6 32.4 33.2 34.0 34.8 35.7 36.5 37.4 38.3 39.2 40.2 41.2
+    42.2 43.2 44.2 45.3 46.4 47.5 48.7 49.9 51.1 52.3 53.6 54.9
+    56.2 57.6 59.0 60.4 61.9 63.4 64.9 66.5 68.1 69.8 71.5 73.2
+    75.0 76.8 78.7 80.6 82.5 84.5 86.6 88.7 90.9 93.1 95.3 97.6
+  ]
+
+  val r1 = map({_ * 10.0}, s1)
+
+  val faults = check-not-equal(r1, exp1%_10, epsilon)
+  if length(faults) > 0: 
+    val msg = string-join(faults, "\n")
+    println("Faults: %_" % [msg])
+    #EXPECT(length(faults) == 0)
+
+  var obs = find-nearest(series, 133.23)
+  #EXPECT(obs == 133.0)
+
+  obs = find-nearest(series, 203.3)
+  #EXPECT(almost-equal(obs, 205.0, epsilon))
+

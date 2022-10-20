@@ -1,0 +1,18 @@
+#use-added-syntax(tests)
+#use-added-syntax(jitx)
+defpackage etools/ESeries/jitx-tests : 
+  import core
+  import collections
+  import etools/ESeries
+  import etools/jitx/ESeries
+  import jitx
+
+
+deftest find-toleranced-test :
+    val series = E96()
+
+    val obs = find-toleranced(series, 120.0)    
+    val exp = tol%(121.0, 1.0)
+    #EXPECT(obs == exp)
+
+    

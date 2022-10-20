@@ -1,0 +1,16 @@
+packages etools/* defined-in "src/"
+import etools/jitx/ESeries when-imported (etools/ESeries, jitx)
+
+package etools/ESeries/tests defined-in "tests/ESeries_tests.stanza"
+package etools/ESeries/jitx-tests defined-in "tests/ESeries_jitx_tests.stanza"
+
+build main :
+  inputs:
+    etools/ESeries
+  pkg: "pkgs"
+  
+build-test etools-tests :
+  inputs: 
+    etools/ESeries/tests
+  pkg: "pkgs"
+  o: "etools-tests.exe"
