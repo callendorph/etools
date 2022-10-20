@@ -66,3 +66,10 @@ Longest Running Tests:
 [PASS] round-places-tests (0 us)
 ```
 
+## VSCode Jitx Testing 
+
+To run the tests in Jitx, you can use the [VSCode Tasks framework](https://code.visualstudio.com/docs/editor/tasks). Open this folder in vscode with Jitx and then: 
+
+1.  Press `Ctrl-P`
+2.  Type `task tests` in the prompt.
+3.  The tests will build and run in a termimal.
