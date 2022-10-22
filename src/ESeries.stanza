@@ -41,6 +41,11 @@ public defn rounded-log10 (v:Int, N:Int, places:Int) -> Double :
 
   round-places(pow(10.0, to-double(v) / to-double(N)), places)
 
+public defn scaled-series (x:Double, exp:Double) -> Double :
+  ;  Convert a particular series value and an exponent into a 
+  ;   scaled series value.
+  x * pow(10.0, exp)
+
 ; E-series Preferred numbers
 ; https://en.wikipedia.org/wiki/E_series_of_preferred_numbers
 public deftype ESeries
@@ -71,7 +76,7 @@ public defmethod find-nearest (self:ESeries, v:Double) -> Double :
   ;    determine what the nearest value in the series for that power of ten is.
   val pwr10 = get-power-of-10(v)
   val series = to-array<Double>(get-series(self))
-  map!({_ * pow(10.0, pwr10)}, series)
+  map!(scaled-series{_ , pwr10}, series)
   val err = map<Double>({abs(_ - v)}, series)
   val errVals = to-array<[Double, Double]>(zip(err, series))
 
