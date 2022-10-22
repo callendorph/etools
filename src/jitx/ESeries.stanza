@@ -4,13 +4,26 @@ defpackage etools/jitx/ESeries :
   import jitx
   import etools/ESeries
 
+
+; Convert a raw value to the toleranced version 
+;   from this series.
+public defmulti get-toleranced (self:ESeries, v:Double) -> Toleranced
+
 ; Find the closest value matching the passed `v` parameter and then 
 ;   return a Toleranced value that includes the series value and its
 ;   associated tolerances.
 public defmulti find-toleranced (self:ESeries, v:Double) -> Toleranced
+public defmulti find-in-range (self:ESeries, v:Toleranced) -> Tuple<Toleranced>
+
+public defmethod get-toleranced (self:ESeries, v:Double) -> Toleranced :
+  tol%(v, 100.0 * series-tolerance(self))
 
 public defmethod find-toleranced (self:ESeries, v:Double) -> Toleranced :
   ; Find the nearest resistor value and return as a toleranced
   ;   value. 
   val nearVal = find-nearest(self, v)
   tol%(nearVal, 100.0 * series-tolerance(self))
+
+public defmethod find-in-range (self:ESeries, v:Toleranced) -> Tuple<Toleranced> :
+  val vals = find-in-range(self, min-value(v), max-value(v))
+  map(tol%{_, 100.0 * series-tolerance(self)}, vals)

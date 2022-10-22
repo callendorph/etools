@@ -7,12 +7,28 @@ defpackage etools/ESeries/jitx-tests :
   import etools/jitx/ESeries
   import jitx
 
+deftest get-toleranced-test :
+  val series = E24()
+
+  val t = get-toleranced(series, 120.0)
+  #EXPECT(typ(t) == 120.0)
+  #EXPECT(min-value(t) == 120.0 * 0.95)
+  #EXPECT(max-value(t) == 120.0 * 1.05)
 
 deftest find-toleranced-test :
-    val series = E96()
+  val series = E96()
 
-    val obs = find-toleranced(series, 120.0)    
-    val exp = tol%(121.0, 1.0)
-    #EXPECT(obs == exp)
+  val obs = find-toleranced(series, 120.0)    
+  val exp = tol%(121.0, 1.0)
+  #EXPECT(obs == exp)
 
+deftest find-in-range-toleranced : 
+  
+  val series = E12()
+  val r = min-max(70.0, 130.0)
+  val vals = find-in-range(series, r)
+
+  val expVals = [82.0, 100.0, 120.0]
     
+  #EXPECT(length(vals) == length(expVals))
+
