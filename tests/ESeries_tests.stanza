@@ -128,7 +128,7 @@ deftest E12-test :
 
   #EXPECT( name(series) == "E12" )
   #EXPECT( elements(series) == 12 )
-  #EXPECT( series-tolerance(series) == 0.10 )
+  #EXPECT( series-tolerance(series) == 10.0 )
   
   val s10 = get-series(series)
 
@@ -155,7 +155,7 @@ deftest E24-test :
 
   #EXPECT( name(series) == "E24" )
   #EXPECT( elements(series) == 24 )
-  #EXPECT( series-tolerance(series) == 0.05 )
+  #EXPECT( series-tolerance(series) == 5.0 )
 
   val s5 = get-series(series)
 
@@ -183,7 +183,7 @@ deftest E48-test :
 
   #EXPECT( name(series) == "E48" )
   #EXPECT( elements(series) == 48 )
-  #EXPECT( series-tolerance(series) == 0.02 )
+  #EXPECT( series-tolerance(series) == 2.0 )
 
   val s2 = get-series(series)
 
@@ -216,7 +216,7 @@ deftest E96-test :
 
   #EXPECT( name(series) == "E96" )
   #EXPECT( elements(series) == 96 )
-  #EXPECT( series-tolerance(series) == 0.01 )
+  #EXPECT( series-tolerance(series) == 1.0 )
 
   val s1 = get-series(series)
 
