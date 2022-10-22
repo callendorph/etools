@@ -8,6 +8,9 @@ public defstruct InvalidValue <: Exception : (msg:String)
 defmethod print (o:OutputStream, e:InvalidValue) :
   print(o, "Invalid Value: %_" % [msg(e)])
 
+public defn in-range (v:Double, minV:Double, maxV:Double) -> True|False : 
+  (v >= minV) and (v <= maxV)
+
 public defn round-places (v:Double, places:Int) -> Double :
   ; Round off the decimal places for a value.
   ;  @param v This value is expected to be in the range from 0.0 - 10.0
@@ -61,6 +64,9 @@ public defmulti series-tolerance (self:ESeries) -> Double
 public defmulti get-series (self:ESeries) -> Tuple<Double>
 ; Find the closest value in this series to the passed `v` parameter.
 public defmulti find-nearest (self:ESeries, v:Double) -> Double
+; Find all the resistors of this series that are 
+;  found with in the given bounds. 
+public defmulti find-in-range (self:ESeries, minV:Double, maxV:Double) -> Tuple<Double>
 
 public defmethod get-series (self:ESeries) -> Tuple<Double> :
   ; Conceptually I see the series as imutable, hence the use of Tuple
@@ -68,6 +74,7 @@ public defmethod get-series (self:ESeries) -> Tuple<Double> :
   val N = elements(self)
   val ret = map(rounded-log10{_, N, places(self)}, 0 to N)
   to-tuple(ret)
+
 
 public defmethod find-nearest (self:ESeries, v:Double) -> Double :
   ; Find the closest value in this series. 
@@ -83,6 +90,26 @@ public defmethod find-nearest (self:ESeries, v:Double) -> Double :
   qsort!(get{_,0}, errVals)
   errVals[0][1]
   
+public defmethod find-in-range (self:ESeries, minV:Double, maxV:Double) -> Tuple<Double> : 
+  if not (minV < maxV) :
+    throw(InvalidValue(to-string("Expects minV < maxV : %_ < %_ " % [minV, maxV])))
+
+  val minPwr10 = get-power-of-10(minV)
+  val maxPwr10 = get-power-of-10(maxV)
+
+  var ranges:List<Array<Double>> = List()
+
+  val series = get-series(self)
+  for i in to-int(minPwr10) to to-int(maxPwr10) + 1 do:
+    val RRange = to-array<Double>(series)
+    map!(scaled-series{_ , to-double(i)}, RRange)
+    ranges = cons(RRange, ranges)
+
+  val searchSpace:Seq<Double> = cat-all(ranges)
+  val restrictedSpace = to-array<Double>(filter(in-range{_, minV, maxV}, searchSpace))
+  qsort!(restrictedSpace)
+  to-tuple(restrictedSpace)
+
 
 public deftype E12 <: ESeries
 public deftype E24 <: ESeries
