@@ -1,0 +1,229 @@
+#use-added-syntax(jitx)
+defpackage etools/jitx/TolMath :
+  import core
+  import jitx
+  import etools/MathTools
+
+public defn plus (A:Toleranced, B:Toleranced) -> Toleranced :
+  val minVal = min-value(A) + min-value(B)
+  val maxVal = max-value(A) + max-value(B)
+  val typical = typ(A) + typ(B)
+  min-typ-max(minVal, typical, maxVal)
+
+public defn negate (A:Toleranced) -> Toleranced :
+  ; Negate will flip min and max I think ?
+  min-typ-max(negate(max-value(A)), negate(typ(A)), negate(min-value(A)))
+
+public defn minus (A:Toleranced, B:Toleranced) -> Toleranced :
+  ; NOTE - Minus is not communative
+  val invB = negate(B)
+  A + invB
+
+public defn times (A:Toleranced, B:Double) -> Toleranced :
+  val minV = B * min-value(A)
+  val maxV = B * max-value(A)
+  val typV = B * typ(A)
+
+  if B > 0.0 :
+    min-typ-max(minV, typV, maxV)
+  else:
+    min-typ-max(maxV, typV, minV)
+
+public defn times (A:Double, B:Toleranced) -> Toleranced :
+  times(B, A)
+
+public defn times (A:Toleranced, B:Toleranced) -> Toleranced :
+  ; Multiply two toleranced values together, resulting in a new toleranced
+  ;   value.
+  ; @NOTE - multiplying negative and positive values together is
+  ;   tricky - we must negate the negative and then re-apply the
+  ;   negation after the multiply is complete.
+
+  defn sign-correct-times (A:Toleranced, B:Toleranced) -> Toleranced :
+    ; This function assumes that the signs for A & B have been properly
+    ;  corrected and we don't need to worry about any signed
+    ;  funny business.
+    val minV = min-value(A) * min-value(B)
+    val maxV = max-value(A) * max-value(B)
+    val typV = typ(A) * typ(B)
+    min-typ-max(minV, typV, maxV)
+
+  label<Toleranced> return:
+    if A < 0.0 and B > 0.0 :
+      val nA = negate(A)
+      val C = sign-correct-times(nA, B)
+      return(negate(C))
+    else if A > 0.0 and B < 0.0 :
+      val nB = negate(B)
+      val C = sign-correct-times(A, nB)
+      return(negate(C))
+    else if A < 0.0 and B < 0.0 :
+      val nA = negate(A)
+      val nB = negate(B)
+      return(sign-correct-times(nA, nB))
+    else:
+      return(sign-correct-times(A, B))
+
+
+
+public defn divide (A:Toleranced, B:Double) -> Toleranced :
+  A  * (1.0 / B)
+
+public defn divide (A:Double, B:Toleranced) -> Toleranced :
+  ; @NOTE - This method does not work for the case when:
+  ;   1)  A is negative  AND
+  ;   2)  B straddles 0.0 - (ie, typ is of a different sign from min or max)
+  ;  The typ value will end up being outside the min/max range.
+  ; @TODO - I think I can handle this by moving the negate outside
+  ;   of the divide.
+  if ( A < 0.0 and straddles-zero?(B)) :
+    fatal("Unable to handle the straddle zero case in divide: A: %~ B: %~" % [A, B])
+
+  val minV = A / min-value(B)
+  val maxV = A / max-value(B)
+  val typV = A / typ(B)
+  if minV < maxV :
+    min-typ-max(minV, typV, maxV)
+  else:
+    min-typ-max(maxV, typV, minV)
+
+public defn divide (A:Toleranced, B:Toleranced) -> Toleranced :
+  ; This has limitations in the case where either A and/or B are
+  ;  straddling 0.0. In this case, the typ value isn't guaranteed to be
+  ;  inside the min/max values.
+  ; Also - the signs for A and the sign for B must match -
+  ;    otherwise, you will get strange results that don't make sense.
+  ;    So we must negate the non-positive value, then do the division
+  ;    and then negate the result.
+  if (straddles-zero?(A) or straddles-zero?(B)) :
+    fatal("Unable to handle the straddle zero case in divide: A: %~ B: %~" % [A, B])
+
+  defn sign-correct-divide (A:Toleranced, B:Toleranced) -> Toleranced :
+    ; This function assumes that the signs for A & B have been properly
+    ;  corrected and we don't need to worry about any signed
+    ;  funny business.
+    val minV = min-value(A) / max-value(B)
+    val maxV = max-value(A) / min-value(B)
+    val typV = typ(A) / typ(B)
+    min-typ-max(minV, typV, maxV)
+
+  label<Toleranced> return:
+    if A < 0.0 and B > 0.0 :
+      val nA = negate(A)
+      val C = sign-correct-divide(nA, B)
+      return(negate(C))
+    else if A > 0.0 and B < 0.0 :
+      val nB = negate(B)
+      val C = sign-correct-divide(A, nB)
+      return(negate(C))
+    else if A < 0.0 and B < 0.0 :
+      val nA = negate(A)
+      val nB = negate(B)
+      return(sign-correct-divide(nA, nB))
+    else:
+      return(sign-correct-divide(A, B))
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;; Comparison Operators
+;;
+;;  I'm interpreting comparison operators as:
+;;
+;;  less        =>   Strictly less than - ie:
+;;                   There is no overlap of the tolerance values.
+;;  less-eq     =>   Overlap allowed but max(A) < max(B)
+;;  greater     =>   Similar concept
+;;  greater-eq  =>
+
+public defn less? (A:Toleranced, B:Toleranced ) -> True|False :
+  max-value(A) < min-value(B)
+
+public defn less-eq? (A:Toleranced, B:Toleranced ) -> True|False :
+  (A < B) or ( max-value(A) <= max-value(B))
+
+public defn greater? (A:Toleranced, B:Toleranced ) -> True|False :
+  min-value(A) > max-value(B)
+
+public defn greater-eq? (A:Toleranced, B:Toleranced ) -> True|False :
+  ; This is another way - but I think the listed method below is
+  ;;  faster in the case where A|B != false
+  ;( A > B ) or ((A|B) != false)
+  ( A > B ) or (max-value(A) >= max-value(B)) ; ((min-value(A) < max-value(B)) and (max-value(A) > max-value(B)))
+
+public defn less? (A:Toleranced, B:Double ) -> True|False :
+  max-value(A) < B
+
+public defn less-eq? (A:Toleranced, B:Double ) -> True|False :
+  (max-value(A) <= B) or in-range?(A, B)
+
+public defn greater? (A:Toleranced, B:Double ) -> True|False :
+  min-value(A) > B
+
+public defn greater-eq? (A:Toleranced, B:Double ) -> True|False :
+  (min-value(A) > B) or in-range?(A, B)
+
+public defn less? (A:Double, B:Toleranced ) -> True|False :
+  B > A
+
+public defn less-eq? (A:Double, B:Toleranced ) -> True|False :
+  B >= A
+
+public defn greater? (A:Double, B:Toleranced ) -> True|False :
+  B < A
+
+public defn greater-eq? (A:Double, B:Toleranced ) -> True|False :
+  B <= A
+
+public defn almost-equal? (A:Toleranced, B:Toleranced, epsilon:Double) -> True|False :
+
+  defn abs-err (f, A:Toleranced, B:Toleranced) -> Double :
+    abs(f(A) - f(B))
+
+  val comps = [min-value, typ-value, max-value]
+  val diffVals = map(abs-err{_, A, B}, comps)
+  all?({_ < epsilon}, diffVals)
+
+public defn straddles-zero? (A:Toleranced) -> True|False :
+  ; This function indicates whether this tolernace value
+  ;   has a min and max value with differing signs.
+  sign(min-value(A)) != sign(max-value(A))
+
+;; Bit operators
+;;   These have the potential to create zero, one, or two toleranced values.
+;;    as a result.
+;;   and    =>  Intersection of two toleranced values
+;;               Returns:
+;;                One Toleranced - overlapping area of two toleranced inputs
+;;                False - Disjoint sets
+;;   or     =>  Union of two toleranced values
+;;                Returns:
+;;                One toleranced - spans two overlapping toleranced inputs
+;;                False - disjoint sets of toleranced - there is no overlap
+;;  Not sure about xor:
+;;   xor    =>  I'm not sure how this would be useful. It will
+;;               return the disjoint sets of the tolerances.
+;;               So it could return one, two, or zero tolerances
+
+public defn bit-and (A:Toleranced, B:Toleranced) -> Toleranced|False :
+  ; This operation should be communative
+  label<Toleranced|False> return :
+    if (A < B) or (B < A):
+      return(false)
+    else :
+      val minV = max(min-value(A), min-value(B))
+      val maxV = min(max-value(A), max-value(B))
+      val typV = (typ(A) + typ(B)) / 2.0
+      if (minV < typV) and (typV < maxV) :
+        return(min-typ-max(minV, typV, maxV))
+      else:
+        return(min-max(minV, maxV))
+
+public defn bit-or (A:Toleranced, B:Toleranced) -> Toleranced|False :
+  ; This operation should be communative
+  label<Toleranced|False> return :
+    if (A < B) or (B < A) :
+      return(false)
+    else :
+      val minV = min(min-value(A), min-value(B))
+      val maxV = max(max-value(A), max-value(B))
+      val typV = (typ(A) + typ(B)) / 2.0
+      return(min-typ-max(minV, typV, maxV))
