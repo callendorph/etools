@@ -1,0 +1,1106 @@
+#use-added-syntax(tests)
+#use-added-syntax(jitx)
+defpackage etools/TolMath-tests :
+  import core
+  import collections
+  import etools/jitx/TolMath
+  import jitx
+
+deftest tol-plus :
+
+  val testVecs = [
+    [
+      min-typ-max(100.0, 110.0, 120.0),
+      min-typ-max(20.0, 35.0, 40.0),
+      min-typ-max(120.0, 145.0, 160.0)
+    ],
+    [
+      min-typ-max(-0.5, 2.0, 4.3),
+      min-typ-max(0.0, 0.5, 1.0),
+      min-typ-max(-0.5, 2.5, 5.3),
+    ],
+    [
+      min-typ-max(-10.0, -9.0, -8.0),
+      min-typ-max(-4.0, -3.5, -2.0),
+      min-typ-max(-14.0, -12.5, -10.0),
+    ],
+  ]
+
+  for testVec in testVecs do :
+    val [A, B, expVal] = testVec
+    val obsVal = A + B
+    #EXPECT(expVal == obsVal)
+    val obsVal2 = B + A
+    #EXPECT(expVal == obsVal2)
+
+deftest tol-minus :
+
+  val testVecs = [
+    [
+      min-typ-max(100.0, 110.0, 120.0),
+      min-typ-max(20.0, 35.0, 40.0),
+      min-typ-max(60.0, 75.0, 100.0)
+    ],
+    [
+      min-typ-max(-0.5, 2.0, 4.3),
+      min-typ-max(0.0, 0.5, 1.0),
+      min-typ-max(-1.5, 1.5, 4.3),
+    ],
+    [
+      min-typ-max(-10.0, -9.0, -8.0),
+      min-typ-max(-4.0, -3.5, -2.0),
+      min-typ-max(-8.0, -5.5, -4.0),
+    ],
+  ]
+
+  for testVec in testVecs do :
+    val [A, B, expVal] = testVec
+    val obsVal = A - B
+    #EXPECT(expVal == obsVal)
+
+deftest tol-times-scalar :
+
+  val testVecs = [
+    [
+      min-typ-max(100.0, 110.0, 120.0),
+      10.0,
+      min-typ-max(1000.0, 1100.0, 1200.0)
+    ],
+    [
+      min-typ-max(-0.5, 2.0, 4.3),
+      -1.7,
+      min-typ-max(-7.31, -3.4, 0.85),
+    ],
+    [
+      min-typ-max(-10.0, -9.0, -8.0),
+      -2.0,
+      min-typ-max(16.0, 18.0, 20.0),
+    ],
+  ]
+
+  for testVec in testVecs do :
+    val [A, B, expVal] = testVec
+    val obsVal = A * B
+    #EXPECT(expVal == obsVal)
+
+    val obsVal2 = B * A
+    #EXPECT(expVal == obsVal2)
+
+deftest tol-times-tol :
+  val testVecs = [
+    [
+      min-typ-max(100.0, 110.0, 120.0),
+      min-typ-max(10.0, 11.0, 12.0),
+      min-typ-max(1000.0, 1210.0, 1440.0)
+    ],
+    [
+      min-typ-max(1.0, 2.0, 4.0),
+      min-typ-max(-5.0, -3.0, -2.0),
+      min-typ-max(-20.0, -6.0, -2.0)
+    ],
+    [
+      min-typ-max(-4.0, -2.0, -1.0),
+      min-typ-max(2.0, 3.0, 5.0),
+      min-typ-max(-20.0, -6.0, -2.0)
+    ],
+    [
+      min-typ-max(-4.0, -2.0, -1.0),
+      min-typ-max(-5.0, -3.0, -2.0),
+      min-typ-max(2.0, 6.0, 20.0)
+    ],
+    [
+      min-typ-max(0.1, 0.2, 0.3),
+      min-typ-max(0.6, 0.7, 0.8),
+      min-typ-max(0.06, 0.14, 0.24)
+    ],
+  ]
+
+  val epsilon = 1.e-3
+  for testVec in testVecs do :
+    val [A, B, expVal] = testVec
+    val obsVal = A * B
+    var eq = almost-equal?(expVal, obsVal, epsilon)
+    #EXPECT(eq)
+    if not eq:
+      println("Multiply1: A: %~ B: %~" % [A, B])
+
+    val obsVal2 = B * A
+    eq = almost-equal?(expVal, obsVal2, epsilon)
+    #EXPECT(eq)
+    if not eq:
+      println("Multiply2: A: %~ B: %~" % [A, B])
+
+  ; @TODO Check that straddles is raised properly
+
+deftest tol-straddles-zero :
+  val testVecs = [
+    [
+      min-typ-max(100.0, 110.0, 120.0),
+      false
+    ],
+    [
+      min-typ-max(-0.6, 2.4, 4.8),
+      true
+    ],
+    [
+      min-typ-max(-10.0, -9.0, -8.0),
+      false
+    ],
+    [
+      min-typ-max(-10.0, -9.0, -0.1),
+      false
+    ],
+    [
+      min-typ-max(-1.0, 0.0, 1.0),
+      true
+    ],
+    [
+      min-typ-max(0.1, 1.0, 2.0),
+      false
+    ],
+  ]
+
+  for testVec in testVecs do :
+    val [A, expVal] = testVec
+    val obsVal = straddles-zero?(A)
+    #EXPECT(expVal == obsVal)
+
+
+deftest tol-divide-scalar :
+
+  val testVecs = [
+    [
+      min-typ-max(100.0, 110.0, 120.0),
+      10.0,
+      min-typ-max(10.0, 11.0, 12.0)
+    ],
+    [
+      min-typ-max(-0.6, 2.4, 4.8),
+      -1.2,
+      min-typ-max(-4.0, -2.0, 0.5),
+    ],
+    [
+      min-typ-max(-10.0, -9.0, -8.0),
+      -2.0,
+      min-typ-max(4.0, 4.5, 5.0),
+    ],
+  ]
+
+  for testVec in testVecs do :
+    val [A, B, expVal] = testVec
+    val obsVal = A / B
+    #EXPECT(expVal == obsVal)
+
+deftest tol-divide-inverse :
+
+  val testVecs = [
+    [
+      10.0,
+      min-typ-max(2.0, 5.0, 10.0),
+      min-typ-max(1.0, 2.0, 5.0)
+    ],
+    [
+      -1.0,
+      min-typ-max(0.5, 2.0, 4.0),
+      min-typ-max(-2.0, -0.5, -0.25)
+    ],
+    [
+      2.0,
+      min-typ-max(-10.0, -8.0, -4.0),
+      min-typ-max(-0.5, -0.25, -0.2),
+    ],
+  ]
+
+  for testVec in testVecs do :
+    val [A, B, expVal] = testVec
+    val obsVal = A / B
+    #EXPECT(expVal == obsVal)
+
+deftest tol-divide-tol :
+  val testVecs = [
+    [
+      min-typ-max(2.0, 5.0, 10.0),
+      min-typ-max(2.0, 5.0, 10.0),
+      min-typ-max(0.2, 1.0, 5.0)
+    ],
+    [
+      min-typ-max(9.0, 10.0, 11.0),
+      min-typ-max(1.9, 2.0, 2.1),
+      min-typ-max(4.286, 5.0, 5.789)
+    ],
+    [
+      min-typ-max(-11.0, -10.0, -9.0),
+      min-typ-max(-2.1, -2.0, -1.9),
+      min-typ-max(4.286, 5.0, 5.789)
+    ]
+    [
+      min-typ-max(-11.0, -10.0, -9.0),
+      min-typ-max(1.9, 2.0, 2.1),
+      min-typ-max(-5.789, -5.0, -4.286)
+    ]
+    [
+      min-typ-max(9.0, 10.0, 11.0),
+      min-typ-max(-2.1, -2.0, -1.9),
+      min-typ-max(-5.789, -5.0, -4.286)
+    ],
+  ]
+
+  val epsilon = 1.e-3
+  for testVec in testVecs do :
+    val [A, B, expVal] = testVec
+    val obsVal = A / B
+    val eq = almost-equal?(expVal, obsVal, epsilon)
+    #EXPECT(eq)
+    if not eq :
+      println("Divide: A: %~ B: %~" % [A,B])
+
+  ; @TODO Check that straddles is raised properly
+
+deftest tol-union-op :
+  val testVecs = [
+    [
+      min-typ-max(1.0, 2.0, 5.0),
+      min-typ-max(2.0, 5.0, 10.0),
+      min-typ-max(1.0, 3.5, 10.0),
+    ],
+    [
+      min-typ-max(1.0, 2.0, 3.0),
+      min-typ-max(4.0, 5.0, 6.0),
+      false
+    ],
+    [
+      min-typ-max(-5.0, -2.0, -1.0),
+      min-typ-max(-10.0, -5.0, -4.0),
+      min-typ-max(-10.0, -3.5, -1.0),
+    ],
+
+    [
+      min-typ-max(-1.0, 0.0, 1.0),
+      min-typ-max(-10.0, -5.0, 4.0),
+      min-typ-max(-10.0, -2.5, 4.0),
+    ],
+  ]
+  for testVec in testVecs do :
+    val [A, B, expVal] = testVec
+    val obsVal = A | B
+    #EXPECT(expVal == obsVal)
+    if expVal != obsVal :
+      println("Run1: A: %~  B: %~" % [A,B])
+
+    val obsVal2 = B | A
+    #EXPECT(expVal == obsVal2)
+    if expVal != obsVal2 :
+      println("Run2: A: %~  B: %~" % [A,B])
+
+deftest tol-intersection-op :
+  val testVecs = [
+    [
+      min-typ-max(1.0, 2.0, 5.0),
+      min-typ-max(2.0, 5.0, 10.0),
+      min-typ-max(2.0, 3.5, 5.0),
+    ],
+    [
+      min-typ-max(1.0, 2.0, 3.0),
+      min-typ-max(4.0, 5.0, 6.0),
+      false
+    ],
+    [
+      min-typ-max(-5.0, -2.0, -1.0),
+      min-typ-max(-10.0, -5.0, -4.0),
+      min-typ-max(-5.0, -4.5, -4.0),
+    ],
+    [
+      min-typ-max(-1.0, 0.0, 1.0),
+      min-typ-max(-10.0, -5.0, 4.0),
+      min-typ-max(-1.0, 0.0, 1.0),
+    ],
+  ]
+  for testVec in testVecs do :
+    val [A, B, expVal] = testVec
+    val obsVal = A & B
+    #EXPECT(expVal == obsVal)
+    if expVal != obsVal :
+      println("Run1: A: %~  B: %~" % [A,B])
+
+    val obsVal2 = B & A
+    #EXPECT(expVal == obsVal2)
+    if expVal != obsVal2 :
+      println("Run2: A: %~  B: %~" % [A,B])
+
+
+deftest tol-comparision-less :
+  val testVecs = [
+    [
+      min-typ-max(1.0, 2.0, 5.0),
+      min-typ-max(2.0, 5.0, 10.0),
+      false
+    ],
+    [
+      min-typ-max(1.0, 2.0, 5.0),
+      min-typ-max(20.0, 50.0, 100.0),
+      true
+    ],
+    [
+      min-typ-max(-1.0, 0.2, 1.0),
+      min-typ-max(2.0, 5.0, 10.0),
+      true
+    ],
+
+    [
+      min-typ-max(-1.0, 0.2, 1.0),
+      min-typ-max(-10.0, -5.0, -2.0),
+      false
+    ],
+    [
+      min-typ-max(-1.0, 0.2, 1.0),
+      min-typ-max(-10.0, -5.0, -1.0),
+      false
+    ],
+    [
+      min-typ-max(-10.0, -5.0, -1.0),
+      min-typ-max(-1.0, 0.2, 1.0),
+      false
+    ],
+    [
+      min-typ-max(-10.0, -5.0, -1.0),
+      min-typ-max(-0.9, 0.2, 1.0),
+      true
+    ],
+  ]
+
+  for testVec in testVecs do :
+    val [A, B, expVal] = testVec
+    val obsVal = A < B
+    #EXPECT(expVal == obsVal)
+    if expVal != obsVal :
+      println("Less: A: %~  B: %~" % [A,B])
+
+deftest tol-comparison-tol-less-scalar :
+  ; Test Less than a scalar
+
+  ; Strictly Less than
+  val testVecs = [
+    [
+      min-typ-max(1.0, 2.0, 5.0),
+      4.0
+      false
+    ],
+    [
+      min-typ-max(1.0, 2.0, 5.0),
+      5.0
+      false
+    ],
+    [
+      min-typ-max(1.0, 2.0, 5.0),
+      5.1,
+      true
+    ],
+    [
+      min-typ-max(1.0, 2.0, 5.0),
+      10.0,
+      true
+    ],
+    [
+      min-typ-max(-1.0, 0.2, 1.0),
+      1.1
+      true
+    ],
+    [
+      min-typ-max(-1.0, 0.2, 1.0),
+      0.5
+      false
+    ],
+
+    [
+      min-typ-max(-10.0, -5.0, -2.0),
+      -2.0,
+      false
+    ],
+    [
+      min-typ-max(-10.0, -5.0, -2.0),
+      -1.0,
+      true
+    ],
+
+    [
+      min-typ-max(-1.0, 0.2, 1.0),
+      -5.0,
+      false
+    ],
+  ]
+
+  for testVec in testVecs do :
+    val [A, B, expVal] = testVec
+    val obsVal = A < B
+    #EXPECT(expVal == obsVal)
+    if expVal != obsVal :
+      println("A: %~  B: %~" % [A,B])
+
+deftest tol-comparison-scalar-less-tol :
+  ; Strictly Less than
+  val testVecs = [
+    [
+      4.0
+      min-typ-max(1.0, 2.0, 5.0),
+      false
+    ],
+    [
+      1.0
+      min-typ-max(1.0, 2.0, 5.0),
+      false
+    ],
+    [
+      0.5,
+      min-typ-max(1.0, 2.0, 5.0),
+      true
+    ],
+    [
+      -10.0,
+      min-typ-max(1.0, 2.0, 5.0),
+      true
+    ],
+    [
+      -1.1,
+      min-typ-max(-1.0, 0.2, 1.0),
+      true
+    ],
+    [
+      -0.5,
+      min-typ-max(-1.0, 0.2, 1.0),
+      false
+    ],
+    [
+      -10.0,
+      min-typ-max(-10.0, -5.0, -2.0),
+      false
+    ],
+    [
+      -10.1,
+      min-typ-max(-10.0, -5.0, -2.0),
+      true
+    ],
+    [
+      5.0,
+      min-typ-max(-1.0, 0.2, 1.0),
+      false
+    ],
+  ]
+
+  for testVec in testVecs do :
+    val [A, B, expVal] = testVec
+    val obsVal = A < B
+    #EXPECT(expVal == obsVal)
+    if expVal != obsVal :
+      println("A: %~  B: %~" % [A,B])
+
+deftest tol-comparison-greater :
+  ; Strictly Greater than
+  val testVecs = [
+    [
+      min-typ-max(2.0, 5.0, 10.0),
+      min-typ-max(1.0, 2.0, 5.0),
+      false
+    ],
+    [
+      min-typ-max(20.0, 50.0, 100.0),
+      min-typ-max(1.0, 2.0, 5.0),
+      true
+    ],
+    [
+      min-typ-max(2.0, 5.0, 10.0),
+      min-typ-max(-1.0, 0.2, 1.0),
+      true
+    ],
+
+    [
+      min-typ-max(-1.0, 0.2, 1.0),
+      min-typ-max(-10.0, -5.0, -2.0),
+      true
+    ],
+    [
+      min-typ-max(-1.0, 0.2, 1.0),
+      min-typ-max(-10.0, -5.0, -1.0),
+      false
+    ],
+    [
+      min-typ-max(-0.9, 0.2, 1.0),
+      min-typ-max(-10.0, -5.0, -1.0),
+      true
+    ],
+  ]
+
+  for testVec in testVecs do :
+    val [A, B, expVal] = testVec
+    val obsVal = A > B
+    #EXPECT(expVal == obsVal)
+    if expVal != obsVal :
+      println("A: %~  B: %~" % [A,B])
+
+
+deftest comparison-tol-greater-scalar :
+  val testVecs = [
+    [
+      min-typ-max(1.0, 2.0, 5.0),
+      4.0
+      false
+    ],
+    [
+      min-typ-max(1.0, 2.0, 5.0),
+      1.0
+      false
+    ],
+    [
+      min-typ-max(1.0, 2.0, 5.0),
+      0.9,
+      true
+    ],
+    [
+      min-typ-max(1.0, 2.0, 5.0),
+      10.0,
+      false
+    ],
+    [
+      min-typ-max(-1.0, 0.2, 1.0),
+      1.1
+      false
+    ],
+    [
+      min-typ-max(-1.0, 0.2, 1.0),
+      0.5
+      false
+    ],
+    [
+      min-typ-max(-1.0, 0.2, 1.0),
+      -1.1
+      true
+    ],
+    [
+      min-typ-max(-10.0, -5.0, -2.0),
+      -2.0,
+      false
+    ],
+    [
+      min-typ-max(-10.0, -5.0, -2.0),
+      -10.0,
+      false
+    ],
+    [
+      min-typ-max(-10.0, -5.0, -2.0),
+      -10.1,
+      true
+    ],
+    [
+      min-typ-max(-1.0, 0.2, 1.0),
+      -5.0,
+      true
+    ],
+  ]
+
+  for testVec in testVecs do :
+    val [A, B, expVal] = testVec
+    val obsVal = A > B
+    #EXPECT(expVal == obsVal)
+    if expVal != obsVal :
+      println("A: %~  B: %~" % [A,B])
+
+deftest comparison-scalar-greater-tol :
+  val testVecs = [
+    [
+      4.0,
+      min-typ-max(1.0, 2.0, 5.0),
+      false
+    ],
+    [
+      5.0
+      min-typ-max(1.0, 2.0, 5.0),
+      false
+    ],
+    [
+      5.5,
+      min-typ-max(1.0, 2.0, 5.0),
+      true
+    ],
+    [
+      -10.0,
+      min-typ-max(1.0, 2.0, 5.0),
+      false
+    ],
+    [
+      1.1,
+      min-typ-max(-1.0, 0.2, 1.0),
+      true
+    ],
+    [
+      -0.5,
+      min-typ-max(-1.0, 0.2, 1.0),
+      false
+    ],
+    [
+      -2.0,
+      min-typ-max(-10.0, -5.0, -2.0),
+      false
+    ],
+    [
+      -1.9,
+      min-typ-max(-10.0, -5.0, -2.0),
+      true
+    ],
+    [
+      5.0,
+      min-typ-max(-1.0, 0.2, 1.0),
+      true
+    ],
+  ]
+
+  for testVec in testVecs do :
+    val [A, B, expVal] = testVec
+    val obsVal = A > B
+    #EXPECT(expVal == obsVal)
+    if expVal != obsVal :
+      println("A: %~  B: %~" % [A,B])
+
+
+deftest tol-comparison-less-eq :
+  val testVecs = [
+    [
+      min-typ-max(1.0, 2.0, 5.0),
+      min-typ-max(2.0, 5.0, 10.0),
+      true
+    ],
+    [
+      min-typ-max(1.0, 2.0, 5.0),
+      min-typ-max(20.0, 50.0, 100.0),
+      true
+    ],
+    [
+      min-typ-max(-1.0, 0.2, 1.0),
+      min-typ-max(2.0, 5.0, 10.0),
+      true
+    ],
+
+    [
+      min-typ-max(-1.0, 0.2, 1.0),
+      min-typ-max(-10.0, -5.0, -2.0),
+      false
+    ],
+    [
+      min-typ-max(-1.0, 0.2, 1.0),
+      min-typ-max(-10.0, -5.0, -1.0),
+      false
+    ],
+    [
+      min-typ-max(-10.0, -5.0, -1.0),
+      min-typ-max(-1.0, 0.2, 1.0),
+      true
+    ],
+    [
+      min-typ-max(-10.0, -5.0, -1.0),
+      min-typ-max(-0.9, 0.2, 1.0),
+      true
+    ],
+
+    [
+      min-typ-max(-1.0, 0.0, 1.0),
+      min-typ-max(-2.0, 0.0, 2.0),
+      true
+    ],
+    [
+      min-typ-max(-2.0, 0.0, 2.0),
+      min-typ-max(-1.0, 0.0, 1.0),
+      false
+    ],
+    [
+      min-typ-max(-1.0, 0.0, 1.0),
+      min-typ-max(-1.0, 0.0, 1.0),
+      true
+    ],
+
+  ]
+
+  for testVec in testVecs do :
+    val [A, B, expVal] = testVec
+    val obsVal = A <= B
+    #EXPECT(expVal == obsVal)
+    if expVal != obsVal :
+      println("LessEq: A: %~  B: %~" % [A,B])
+
+
+deftest tol-comparison-tol-less-eq-scalar :
+  val testVecs = [
+    [
+      min-typ-max(1.0, 2.0, 5.0),
+      5.0,
+      true
+    ],
+    [
+      min-typ-max(1.0, 2.0, 5.0),
+      10.0,
+      true
+    ],
+    [
+      min-typ-max(-1.0, 0.2, 1.0),
+      1.5,
+      true
+    ],
+    [
+      min-typ-max(-1.0, 0.2, 1.0),
+      0.8,
+      true
+    ],
+    [
+      ; Overlap on min boundary
+      min-typ-max(-1.0, 0.2, 1.0),
+      -1.0,
+      true
+    ],
+    [
+      min-typ-max(-1.0, 0.2, 1.0),
+      -2.0
+      false
+    ],
+    [
+      min-typ-max(-10.0, -5.0, -1.0),
+      -1.0
+      true
+    ],
+    [
+      min-typ-max(-10.0, -5.0, -1.0),
+      -9.0
+      true
+    ],
+
+    [
+      min-typ-max(-1.0, 0.0, 1.0),
+      0.0
+      true
+    ],
+    [
+      min-typ-max(-2.0, 0.0, 2.0),
+      -2.1
+      false
+    ],
+    [
+      min-typ-max(-1.0, 0.0, 1.0),
+      1.0
+      true
+    ],
+  ]
+
+  for testVec in testVecs do :
+    val [A, B, expVal] = testVec
+    val obsVal = A <= B
+    #EXPECT(expVal == obsVal)
+    if expVal != obsVal :
+      println("A: %~  B: %~" % [A,B])
+
+
+deftest tol-comparison-scalar-less-eq-tol :
+
+ val testVecs = [
+    [
+      5.0,
+      min-typ-max(1.0, 2.0, 5.0),
+      true
+    ],
+    [
+      10.0,
+      min-typ-max(1.0, 2.0, 5.0),
+      false
+    ],
+    [
+      1.5,
+      min-typ-max(-1.0, 0.2, 1.0),
+      false
+    ],
+    [
+      0.8,
+      min-typ-max(-1.0, 0.2, 1.0),
+      true
+    ],
+    [
+      ; Overlap on min boundary
+      -1.0,
+      min-typ-max(-1.0, 0.2, 1.0),
+      true
+    ],
+    [
+      -2.0
+      min-typ-max(-1.0, 0.2, 1.0),
+      true
+    ],
+    [
+      -1.0
+      min-typ-max(-10.0, -5.0, -1.0),
+      true
+    ],
+    [
+      -9.0
+      min-typ-max(-10.0, -5.0, -1.0),
+      true
+    ],
+    [
+      -0.5
+      min-typ-max(-10.0, -5.0, -1.0),
+      false
+    ],
+    [
+      0.0
+      min-typ-max(-1.0, 0.0, 1.0),
+      true
+    ],
+    [
+      -2.1
+      min-typ-max(-2.0, 0.0, 2.0),
+      true
+    ],
+    [
+      1.0
+      min-typ-max(-1.0, 0.0, 1.0),
+      true
+    ],
+    [
+      1.1
+      min-typ-max(-1.0, 0.0, 1.0),
+      false
+    ],
+  ]
+
+  for testVec in testVecs do :
+    val [A, B, expVal] = testVec
+    val obsVal = A <= B
+    #EXPECT(expVal == obsVal)
+    if expVal != obsVal :
+      println("A: %~  B: %~" % [A,B])
+
+deftest tol-comparison-greater-eq :
+  val testVecs = [
+    [
+      min-typ-max(1.0, 2.0, 5.0),
+      min-typ-max(2.0, 5.0, 10.0),
+      false
+    ],
+    [
+      min-typ-max(1.0, 2.0, 5.0),
+      min-typ-max(20.0, 50.0, 100.0),
+      false
+    ],
+    [
+      min-typ-max(20.0, 50.0, 100.0),
+      min-typ-max(1.0, 2.0, 5.0),
+      true
+    ],
+    [
+      min-typ-max(-1.0, 0.2, 1.0),
+      min-typ-max(2.0, 5.0, 10.0),
+      false
+    ],
+    [
+      min-typ-max(2.0, 5.0, 10.0),
+      min-typ-max(-1.0, 0.2, 1.0),
+      true
+    ],
+    [
+      min-typ-max(2.0, 5.0, 10.0),
+      min-typ-max(-1.0, 0.2, 3.0),
+      true
+    ],
+    [
+      min-typ-max(-1.0, 0.2, 1.0),
+      min-typ-max(-10.0, -5.0, -2.0),
+      true
+    ],
+    [
+      min-typ-max(-1.0, 0.2, 1.0),
+      min-typ-max(-10.0, -5.0, -1.0),
+      true
+    ],
+    [
+      min-typ-max(-10.0, -5.0, -1.0),
+      min-typ-max(-1.0, 0.2, 1.0),
+      false
+    ],
+    [
+      min-typ-max(-10.0, -5.0, -1.0),
+      min-typ-max(-0.9, 0.2, 1.0),
+      false
+    ],
+
+    [
+      min-typ-max(-1.0, 0.0, 1.0),
+      min-typ-max(-2.0, 0.0, 2.0),
+      false
+    ],
+    [
+      min-typ-max(-2.0, 0.0, 2.0),
+      min-typ-max(-1.0, 0.0, 1.0),
+      true
+    ],
+    [
+      min-typ-max(-1.0, 0.0, 1.0),
+      min-typ-max(-1.0, 0.0, 1.0),
+      true
+    ],
+  ]
+
+  for testVec in testVecs do :
+    val [A, B, expVal] = testVec
+    val obsVal = A >= B
+    #EXPECT(expVal == obsVal)
+    if expVal != obsVal :
+      println("Greater Eq: A: %~  B: %~" % [A,B])
+
+
+deftest tol-comparison-tol-greater-eq-scalar :
+  val testVecs = [
+    [
+      min-typ-max(1.0, 2.0, 5.0),
+      1.5
+      true
+    ],
+    [
+      min-typ-max(1.0, 2.0, 5.0),
+      6.0
+      false
+    ],
+    [
+      min-typ-max(20.0, 50.0, 100.0),
+      10.0
+      true
+    ],
+    [
+      min-typ-max(-1.0, 0.2, 1.0),
+      2.0
+      false
+    ],
+    [
+      min-typ-max(2.0, 5.0, 10.0),
+      -1.0
+      true
+    ],
+    [
+      min-typ-max(2.0, 5.0, 10.0),
+      2.0
+      true
+    ],
+    [
+      min-typ-max(-1.0, 0.2, 1.0),
+      -5.0
+      true
+    ],
+    [
+      min-typ-max(-1.0, 0.2, 1.0),
+      -1.0
+      true
+    ],
+    [
+      min-typ-max(-10.0, -5.0, -1.0),
+      -0.999
+      false
+    ],
+    [
+      min-typ-max(-10.0, -5.0, -1.0),
+      -2.0
+      true
+    ],
+
+    [
+      min-typ-max(-1.0, 0.0, 1.0),
+      2.0
+      false
+    ],
+    [
+      min-typ-max(-2.0, 0.0, 2.0),
+      0.0
+      true
+    ],
+    [
+      min-typ-max(-1.0, 0.0, 1.0),
+      -1.0
+      true
+    ],
+  ]
+
+  for testVec in testVecs do :
+    val [A, B, expVal] = testVec
+    val obsVal = A >= B
+    #EXPECT(expVal == obsVal)
+    if expVal != obsVal :
+      println("Greater Eq: A: %~  B: %~" % [A,B])
+
+
+deftest tol-comparison-scalar-greater-eq-tol :
+  val testVecs = [
+    [
+      1.5
+      min-typ-max(1.0, 2.0, 5.0),
+      true
+    ],
+    [
+      6.0
+      min-typ-max(1.0, 2.0, 5.0),
+      true
+    ],
+    [
+      10.0
+      min-typ-max(20.0, 50.0, 100.0),
+      false
+    ],
+    [
+      2.0
+      min-typ-max(-1.0, 0.2, 1.0),
+      true
+    ],
+    [
+      -1.0
+      min-typ-max(2.0, 5.0, 10.0),
+      false
+    ],
+    [
+      2.0
+      min-typ-max(2.0, 5.0, 10.0),
+      true
+    ],
+    [
+      -5.0
+      min-typ-max(-1.0, 0.2, 1.0),
+      false
+    ],
+    [
+      -1.0
+      min-typ-max(-1.0, 0.2, 1.0),
+      true
+    ],
+    [
+      -0.999
+      min-typ-max(-10.0, -5.0, -1.0),
+      true
+    ],
+    [
+      -2.0
+      min-typ-max(-10.0, -5.0, -1.0),
+      true
+    ],
+
+    [
+      -2.0
+      min-typ-max(-1.0, 0.0, 1.0),
+      false
+    ],
+    [
+      min-typ-max(-2.0, 0.0, 2.0),
+      0.0
+      true
+    ],
+    [
+      min-typ-max(-1.0, 0.0, 1.0),
+      -1.0
+      true
+    ],
+  ]
+
+  for testVec in testVecs do :
+    val [A, B, expVal] = testVec
+    val obsVal = A >= B
+    #EXPECT(expVal == obsVal)
+    if expVal != obsVal :
+      println("Greater Eq: A: %~  B: %~" % [A,B])
