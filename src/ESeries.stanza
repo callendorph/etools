@@ -2,13 +2,9 @@ defpackage etools/ESeries :
   import core
   import collections
   import math
+  import etools/Errors
 
-public defstruct InvalidValue <: Exception : (msg:String)
-
-defmethod print (o:OutputStream, e:InvalidValue) :
-  print(o, "Invalid Value: %_" % [msg(e)])
-
-public defn in-range (v:Double, minV:Double, maxV:Double) -> True|False : 
+public defn in-range (v:Double, minV:Double, maxV:Double) -> True|False :
   (v >= minV) and (v <= maxV)
 
 public defn round-places (v:Double, places:Int) -> Double :

@@ -2,6 +2,7 @@
 defpackage etools/ESeries/tests : 
   import core
   import collections
+  import etools/Errors
   import etools/ESeries
 
 ; Used for testing floating point numbers to check
