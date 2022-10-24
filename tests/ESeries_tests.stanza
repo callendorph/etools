@@ -1,5 +1,5 @@
 #use-added-syntax(tests)
-defpackage etools/ESeries/tests : 
+defpackage etools/ESeries/tests :
   import core
   import collections
   import etools/Errors
@@ -16,8 +16,8 @@ val epsilon = 1.0e-3
   defn check-not-equal (obs, exp, epsilon:Double) -> List<String> :
     ; Check two sequences for equality within epsilon
     var faults = List()
-    for i in 0 to length(exp) do : 
-      if not almost-equal(obs[i], exp[i], epsilon) : 
+    for i in 0 to length(exp) do :
+      if not almost-equal(obs[i], exp[i], epsilon) :
         faults = cons(to-string("FAIL: %_ != %_ index=%_" % [obs[i], exp[i], i]), faults)
     faults
 
@@ -26,15 +26,15 @@ val epsilon = 1.0e-3
       val unexpected = f()
       [false, "No Exception Thrown"]
     catch (e:InvalidValue) :
-      val buf = StringBuffer(128) 
+      val buf = StringBuffer(128)
       print(buf, e)
-      val msg = to-string(buf) 
+      val msg = to-string(buf)
       [true, msg]
 
-deftest in-range-test : 
+deftest in-range-test :
   val testVecs = [
     [1.0, 0.0, 10.0, true]
-    [-1.0, 0.0, 10.0, false]    
+    [-1.0, 0.0, 10.0, false]
     [-1.0, -10.0, 10.0, true]
     [-9.0, -10.0, 10.0, true]
     [9.0, -10.0, 10.0, true]
@@ -45,7 +45,7 @@ deftest in-range-test :
   ]
 
   for testVec in testVecs do :
-    val [v, minV, maxV, expVal] = testVec 
+    val [v, minV, maxV, expVal] = testVec
     val obsVal = in-range(v, minV, maxV)
     #EXPECT(expVal == obsVal)
 
@@ -58,7 +58,7 @@ deftest round-places-tests :
   ]
 
   for testVec in testVecs do :
-    val [inVal, places, expVal] = testVec 
+    val [inVal, places, expVal] = testVec
     val obsVal = round-places(inVal, places)
     #EXPECT(expVal == obsVal)
 
@@ -67,7 +67,7 @@ deftest round-places-tests :
     [{round-places(2.5, -3)}, "Expects places > 0 : -3 > 0"]
   ]
 
-  for failVec in failVecs do : 
+  for failVec in failVecs do :
     ; Test that exceptions throw in the way we expect
     val [f, msgClip] = failVec
     val [throws, msg] = expect-throw(f)
@@ -84,7 +84,7 @@ deftest rounded-log10-test :
     [{rounded-log10( 0, -12, 2)}, "Expects N > 0 : -12 > 0"]
   ]
 
-  for failVec in failVecs do : 
+  for failVec in failVecs do :
     ; Test that exceptions throw in the way we expect
     val [f, msgClip] = failVec
     val [throws, msg] = expect-throw(f)
@@ -103,7 +103,7 @@ deftest get-power-of-10-test :
   ]
 
   for testVec in testVecs do :
-    val [inVal, expVal] = testVec 
+    val [inVal, expVal] = testVec
     val obsVal = get-power-of-10(inVal)
     #EXPECT(expVal == obsVal)
 
@@ -112,7 +112,7 @@ deftest get-power-of-10-test :
     [{get-power-of-10(-1.0)}, "Expects v > 0 : -1.0 > 0"]
   ]
 
-  for failVec in failVecs do : 
+  for failVec in failVecs do :
     ; Test that exceptions throw in the way we expect
     val [f, msgClip] = failVec
     val [throws, msg] = expect-throw(f)
@@ -124,13 +124,13 @@ deftest get-power-of-10-test :
 
 
 
-deftest E12-test : 
-  val series = E12() 
+deftest E12-test :
+  val series = E12()
 
   #EXPECT( name(series) == "E12" )
   #EXPECT( elements(series) == 12 )
   #EXPECT( series-tolerance(series) == 10.0 )
-  
+
   val s10 = get-series(series)
 
   #EXPECT(length(s10) == 12)
@@ -143,7 +143,7 @@ deftest E12-test :
 
   val faults = check-not-equal(r10, exp10%_10, epsilon)
 
-  if length(faults) > 0: 
+  if length(faults) > 0:
     val msg = string-join(faults, "\n")
     println("Faults: %_" % [msg])
     #EXPECT(length(faults) == 0)
@@ -151,8 +151,8 @@ deftest E12-test :
   val obs = find-nearest(series, 133.23)
   #EXPECT(obs == 120.0)
 
-deftest E24-test : 
-  val series = E24() 
+deftest E24-test :
+  val series = E24()
 
   #EXPECT( name(series) == "E24" )
   #EXPECT( elements(series) == 24 )
@@ -171,7 +171,7 @@ deftest E24-test :
   val exp5%_10 = map(to-double, exp5%_10_raw)
 
   val faults = check-not-equal(r5, exp5%_10, epsilon)
-  if length(faults) > 0: 
+  if length(faults) > 0:
     val msg = string-join(faults, "\n")
     println("Faults: %_" % [msg])
     #EXPECT(length(faults) == 0)
@@ -179,8 +179,8 @@ deftest E24-test :
   val obs = find-nearest(series, 133.23)
   #EXPECT(obs == 130.0)
 
-deftest E48-test : 
-  val series = E48() 
+deftest E48-test :
+  val series = E48()
 
   #EXPECT( name(series) == "E48" )
   #EXPECT( elements(series) == 48 )
@@ -191,10 +191,10 @@ deftest E48-test :
   #EXPECT(length(s2) == 48)
 
   val exp2% = [
-    1.00, 1.05, 1.10, 1.15, 1.21, 1.27, 1.33, 1.40, 1.47, 1.54, 
-    1.62, 1.69, 1.78, 1.87, 1.96, 2.05, 2.15, 2.26, 2.37, 2.49, 
-    2.61, 2.74, 2.87, 3.01, 3.16, 3.32, 3.48, 3.65, 3.83, 4.02, 
-    4.22, 4.42, 4.64, 4.87, 5.11, 5.36, 5.62, 5.90, 6.19, 6.49, 
+    1.00, 1.05, 1.10, 1.15, 1.21, 1.27, 1.33, 1.40, 1.47, 1.54,
+    1.62, 1.69, 1.78, 1.87, 1.96, 2.05, 2.15, 2.26, 2.37, 2.49,
+    2.61, 2.74, 2.87, 3.01, 3.16, 3.32, 3.48, 3.65, 3.83, 4.02,
+    4.22, 4.42, 4.64, 4.87, 5.11, 5.36, 5.62, 5.90, 6.19, 6.49,
     6.81, 7.15, 7.50, 7.87, 8.25, 8.66, 9.09, 9.53
   ]
 
@@ -203,7 +203,7 @@ deftest E48-test :
   val r2 = map({_ * 10.0}, s2)
 
   val faults = check-not-equal(r2, exp2%_10, epsilon)
-  if length(faults) > 0: 
+  if length(faults) > 0:
     val msg = string-join(faults, "\n")
     println("Faults: %_" % [msg])
     #EXPECT(length(faults) == 0)
@@ -213,7 +213,7 @@ deftest E48-test :
 
 
 deftest E96-test :
-  val series = E96() 
+  val series = E96()
 
   #EXPECT( name(series) == "E96" )
   #EXPECT( elements(series) == 96 )
@@ -238,7 +238,7 @@ deftest E96-test :
   val r1 = map({_ * 10.0}, s1)
 
   val faults = check-not-equal(r1, exp1%_10, epsilon)
-  if length(faults) > 0: 
+  if length(faults) > 0:
     val msg = string-join(faults, "\n")
     println("Faults: %_" % [msg])
     #EXPECT(length(faults) == 0)
@@ -260,12 +260,12 @@ deftest find-in-range-test :
   ]
 
   for testVec in testVecs do :
-    val [series, minVal, maxVal, expVal] = testVec 
+    val [series, minVal, maxVal, expVal] = testVec
     val obsVal = find-in-range(series, minVal, maxVal)
     #EXPECT(length(expVal) == length(obsVal))
-    
+
     val faults = check-not-equal(obsVal, expVal, epsilon)
-    if length(faults) > 0: 
+    if length(faults) > 0:
       val msg = string-join(faults, "\n")
       println("Faults: %_" % [msg])
       #EXPECT(length(faults) == 0)
@@ -274,7 +274,7 @@ deftest find-in-range-test :
     [{find-in-range(E24(), 200.5, 3.0)}, "Expects minV < maxV : 200.5 < 3.0"]
   ]
 
-  for failVec in failVecs do : 
+  for failVec in failVecs do :
     ; Test that exceptions throw in the way we expect
     val [f, msgClip] = failVec
     val [throws, msg] = expect-throw(f)

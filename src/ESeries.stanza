@@ -20,12 +20,12 @@ public defn round-places (v:Double, places:Int) -> Double :
   round(v * deciPlaces) / deciPlaces
 
 public defn get-power-of-10 (v:Double) -> Double :
-  ; Get the power of 10 series for a value. For example: 
+  ; Get the power of 10 series for a value. For example:
   ;   532.0 => 5.32 * 10^2 => Returns 2
   ;   0.34 => 3.4 * 10^-1 => Returns -1
   if not (v > 0.0) :
     throw(InvalidValue(to-string("Expects v > 0 : %_ > 0" % [v])))
-  floor(log10(v))  
+  floor(log10(v))
 
 public defn rounded-log10 (v:Int, N:Int, places:Int) -> Double :
   ; Compute the N-th root of the round log series.
@@ -35,13 +35,13 @@ public defn rounded-log10 (v:Int, N:Int, places:Int) -> Double :
   if not ( N > 0 ) :
     throw(InvalidValue(to-string("Expects N > 0 : %_ > 0" % [N])))
 
-  if not v < N : 
+  if not v < N :
     throw(InvalidValue(to-string("Expects v < N : %_ < %_" % [v, N])))
 
   round-places(pow(10.0, to-double(v) / to-double(N)), places)
 
 public defn scaled-series (x:Double, exp:Double) -> Double :
-  ;  Convert a particular series value and an exponent into a 
+  ;  Convert a particular series value and an exponent into a
   ;   scaled series value.
   x * pow(10.0, exp)
 
@@ -52,16 +52,16 @@ public deftype ESeries
 public defmulti name (self:ESeries) -> String
 public defmulti elements (self:ESeries) -> Int
 public defmulti places (self:ESeries) -> Int
-; Nominal Tolerance for this Series of values as a 
+; Nominal Tolerance for this Series of values as a
 ;  "Percentage" value 0-100.0
 public defmulti series-tolerance (self:ESeries) -> Double
-; Get the Values that constitute the closed sequence of 
-;  this series. 
+; Get the Values that constitute the closed sequence of
+;  this series.
 public defmulti get-series (self:ESeries) -> Tuple<Double>
 ; Find the closest value in this series to the passed `v` parameter.
 public defmulti find-nearest (self:ESeries, v:Double) -> Double
-; Find all the resistors of this series that are 
-;  found with in the given bounds. 
+; Find all the resistors of this series that are
+;  found with in the given bounds.
 public defmulti find-in-range (self:ESeries, minV:Double, maxV:Double) -> Tuple<Double>
 
 public defmethod get-series (self:ESeries) -> Tuple<Double> :
@@ -73,9 +73,9 @@ public defmethod get-series (self:ESeries) -> Tuple<Double> :
 
 
 public defmethod find-nearest (self:ESeries, v:Double) -> Double :
-  ; Find the closest value in this series. 
+  ; Find the closest value in this series.
   ; @param v - this value can be any positive value. We will determine
-  ;    what power of ten (ie, 1-10, 10-100, etc) and then use that to 
+  ;    what power of ten (ie, 1-10, 10-100, etc) and then use that to
   ;    determine what the nearest value in the series for that power of ten is.
   val pwr10 = get-power-of-10(v)
   val series = to-array<Double>(get-series(self))
@@ -85,8 +85,8 @@ public defmethod find-nearest (self:ESeries, v:Double) -> Double :
 
   qsort!(get{_,0}, errVals)
   errVals[0][1]
-  
-public defmethod find-in-range (self:ESeries, minV:Double, maxV:Double) -> Tuple<Double> : 
+
+public defmethod find-in-range (self:ESeries, minV:Double, maxV:Double) -> Tuple<Double> :
   if not (minV < maxV) :
     throw(InvalidValue(to-string("Expects minV < maxV : %_ < %_ " % [minV, maxV])))
 
@@ -112,12 +112,12 @@ public deftype E24 <: ESeries
 public deftype E48 <: ESeries
 public deftype E96 <: ESeries
 
-public defn E12 () -> E12 : 
+public defn E12 () -> E12 :
   val name = "E12"
   val elements = 12
   val places = 2
   val tolerance = 10.0
-  new E12 : 
+  new E12 :
     defmethod name (this) : name
     defmethod elements (this) : elements
     defmethod places (this) : places
@@ -134,10 +134,10 @@ public defn E24 () -> E24 :
   val elements = 24
   val places = 2
   val tolerance = 5.0
-  new E24 : 
+  new E24 :
     defmethod name (this) : name
     defmethod elements (this) : elements
-    defmethod places (this) : places    
+    defmethod places (this) : places
     defmethod series-tolerance (this) : tolerance
     defmethod get-series (this) -> Tuple<Double> :
       ; For historical reasons - there are several values
@@ -154,7 +154,7 @@ public defn E48 () -> E48 :
   val elements = 48
   val places = 3
   val tolerance = 2.0
-  new E48 : 
+  new E48 :
     defmethod name (this) : name
     defmethod elements (this) : elements
     defmethod places (this) : places
@@ -165,7 +165,7 @@ public defn E96 () -> E96 :
   val elements = 96
   val places = 3
   val tolerance = 1.0
-  new E96 : 
+  new E96 :
     defmethod name (this) : name
     defmethod elements (this) : elements
     defmethod places (this) : places
