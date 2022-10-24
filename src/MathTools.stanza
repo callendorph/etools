@@ -1,0 +1,12 @@
+defpackage etools/MathTools :
+  import core
+
+public defn sign (A:Double) -> Int : 
+  label<Int> return :
+    if A == 0.0 : 
+      return(0)
+    else:
+      if A < 0.0:
+        return(-1)
+      else:
+        return(1)
