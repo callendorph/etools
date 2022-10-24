@@ -1,0 +1,7 @@
+defpackage etools/Errors :
+  import core
+
+public defstruct InvalidValue <: Exception : (msg:String)
+
+defmethod print (o:OutputStream, e:InvalidValue) :
+  print(o, "Invalid Value: %_" % [msg(e)])
