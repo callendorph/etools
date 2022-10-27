@@ -3,6 +3,7 @@ defpackage etools/jitx/TolMath :
   import core
   import jitx
   import etools/MathTools
+  import etools/Errors
 
 public defn plus (A:Toleranced, B:Toleranced) -> Toleranced :
   val minVal = min-value(A) + min-value(B)
@@ -77,7 +78,7 @@ public defn divide (A:Double, B:Toleranced) -> Toleranced :
   ; @TODO - I think I can handle this by moving the negate outside
   ;   of the divide.
   if ( A < 0.0 and straddles-zero?(B)) :
-    fatal("Unable to handle the straddle zero case in divide: A: %~ B: %~" % [A, B])
+    throw(InvalidValue(to-string("Unable to handle the straddle zero case in divide: A: %~ B: %~" % [A, B])))
 
   val minV = A / min-value(B)
   val maxV = A / max-value(B)
@@ -96,7 +97,7 @@ public defn divide (A:Toleranced, B:Toleranced) -> Toleranced :
   ;    So we must negate the non-positive value, then do the division
   ;    and then negate the result.
   if (straddles-zero?(A) or straddles-zero?(B)) :
-    fatal("Unable to handle the straddle zero case in divide: A: %~ B: %~" % [A, B])
+    throw(InvalidValue(to-string("Unable to handle the straddle zero case in divide: A: %~ B: %~" % [A, B])))
 
   defn sign-correct-divide (A:Toleranced, B:Toleranced) -> Toleranced :
     ; This function assumes that the signs for A & B have been properly

@@ -3,6 +3,7 @@
 defpackage etools/TolMath-tests :
   import core
   import collections
+  import etools/TestTools
   import etools/jitx/TolMath
   import jitx
 
@@ -216,6 +217,21 @@ deftest tol-divide-inverse :
     val obsVal = A / B
     #EXPECT(expVal == obsVal)
 
+  ; Test Exceptional case
+
+  val failVecs = [
+    [{-200.5 / min-max(-1.0, 2.0)}, "Unable to handle the straddle"]
+  ]
+
+  for failVec in failVecs do :
+    ; Test that exceptions throw in the way we expect
+    val [f, msgClip] = failVec
+    val [throws, msg] = expect-throw(f)
+    println("Mesg: %~" % [msg])
+    #EXPECT(throws)
+    #EXPECT(index-of-chars(msg, "Invalid Value") != false)
+    #EXPECT(index-of-chars(msg, msgClip) != false)
+
 deftest tol-divide-tol :
   val testVecs = [
     [
@@ -254,7 +270,20 @@ deftest tol-divide-tol :
     if not eq :
       println("Divide: A: %~ B: %~" % [A,B])
 
-  ; @TODO Check that straddles is raised properly
+  val failVecs = [
+    [{min-max(1.0, 4.0) / min-max(-1.0, 2.0)}, "Unable to handle the straddle"]
+    [{min-max(-4.0, 4.0) / min-max(-2.0, -1.0)}, "Unable to handle the straddle"]
+  ]
+
+  for failVec in failVecs do :
+    ; Test that exceptions throw in the way we expect
+    val [f, msgClip] = failVec
+    val [throws, msg] = expect-throw(f)
+    println("Mesg: %~" % [msg])
+    #EXPECT(throws)
+    #EXPECT(index-of-chars(msg, "Invalid Value") != false)
+    #EXPECT(index-of-chars(msg, msgClip) != false)
+
 
 deftest tol-union-op :
   val testVecs = [
