@@ -4,6 +4,7 @@ defpackage etools/ESeries/tests :
   import collections
   import etools/Errors
   import etools/ESeries
+  import etools/TestTools
 
 ; Used for testing floating point numbers to check
 ;   for "equality"
@@ -21,15 +22,6 @@ val epsilon = 1.0e-3
         faults = cons(to-string("FAIL: %_ != %_ index=%_" % [obs[i], exp[i], i]), faults)
     faults
 
-  defn expect-throw (f) -> [True|False, String] :
-    try :
-      val unexpected = f()
-      [false, "No Exception Thrown"]
-    catch (e:InvalidValue) :
-      val buf = StringBuffer(128)
-      print(buf, e)
-      val msg = to-string(buf)
-      [true, msg]
 
 deftest in-range-test :
   val testVecs = [
