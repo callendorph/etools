@@ -1,0 +1,12 @@
+defpackage etools/TestTools :
+  import core
+  import etools/Errors
+
+#if-defined(TESTING) :
+  public defn expect-throw (f) -> [True|False, String] :
+    try :
+      val unexpected = f()
+      [false, "No Exception Thrown"]
+    catch (e:Exception) :
+      val msg = to-string("%~" % [e])
+      [true, msg]
