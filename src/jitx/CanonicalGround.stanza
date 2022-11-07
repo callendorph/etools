@@ -1,0 +1,85 @@
+#use-added-syntax(jitx)
+defpackage etools/jitx/CanonicalGround :
+  import core
+  import jitx
+  import jitx/commands
+  import ocdb/utils/generic-components
+
+;;;;;;;;;;;;;;;;;;;;;;;
+;
+;  Canonical Ground
+;
+;   The idea is that for most circuits there is a ground
+; reference. Sometimes a circuit might have multiple
+; isolated grounds in islands - but it is uncommon to have multiple
+; grounds at the same time. For each island - there is a
+; Canonical ground. Implicitly all components in the circuit
+; are referenced to that ground.
+;
+; This package provides tools for managing this canonical
+; ground.
+;
+
+public defn ground-pin (p : JITXObject ) :
+  ; Add a property to a pin definition that indicates that
+  ;   this pin should be connected to the canonical ground.
+  ; @param pinObj
+  inside pcb-component:
+    property(p.canonical-ground) = true
+
+public defn disable-ground-pin (p : JITXObject ) :
+  inside pcb-component:
+    if has-property?(p.canonical-gorund) :
+      property(p.canonical-ground) = false
+
+public defn shunt-comp (p:JITXObject, make-comp, params : Tuple<KeyValue>):
+  ; Shunt Component to ground through the generated component definition
+  ;  created by `make-comp`
+  inside pcb-module:
+    val CompDef = make-comp(params)
+    inst U : CompDef
+    net (U.p[1], p)
+    ground-pin(U.p[2])
+    U
+
+public defn bypass-cap (p:JITXObject, params:Tuple<KeyValue>):
+  shunt-comp(p, ceramic-cap, params)
+
+public defn bypass-cap (p:JITXObject, capacitance:Double, tol:Double):
+  bypass-cap(p, ["capacitance" => capacitance "tolerance" => tol])
+
+public defn bypass-cap (p:JITXObject, capacitance:Double):
+  bypass-cap(p, ["capacitance" => capacitance])
+
+public defn shunt-res (p:JITXObject, params:Tuple<KeyValue> ):
+  shunt-comp(p, chip-resistor, params)
+
+public defn shunt-res (p:JITXObject, resistance:Double, tol:Double):
+  shunt-res(p, ["resistance" => resistance "tolerance" => tol])
+
+public defn shunt-res (p:JITXObject, resistance:Double):
+  shunt-res(p, ["resistance" => resistance])
+
+
+public defn with-ground (gnd : Net) :
+  ; Given a instantiated module -- use the passed
+  ; net object as the reference ground for this circuit.
+  ;
+  ; This function will go through all of the components and sub-modules
+  ;   in the module where this function is called. For each component
+  ;   or sub-module - we will  look for the "canonical-ground" property. 
+  ; If:
+  ;   1. The property is found
+  ;   2. and the property is true
+  ;  We will connect to the passed ground Net object.
+  ; 
+  ; @NOTE - We can't check for `connected?` on the pin of the module
+  ;   or component because for sub-modules, the pin will likely be 
+  ;   connected to something internal to the module.
+  ;  and true - then we will
+  inside pcb-module:
+    for i in instances(self) do :
+      for p in pins(i) do :
+        if has-property?(p.canonical-ground) :
+          if property(p.canonical-ground) :
+            net (gnd, p)

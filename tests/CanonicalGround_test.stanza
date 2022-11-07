@@ -1,0 +1,50 @@
+#use-added-syntax(tests)
+#use-added-syntax(jitx)
+defpackage etools/CanonicalGround/jitx-tests :
+  import core
+  import jitx
+  import jitx/commands
+  import etools/jitx/CanonicalGround
+
+pcb-component comp1 :
+  pin-properties :
+    [pin:Ref | pads:Ref ... | side:Dir | rated-voltage:Double]
+    [RUN | p[1] | Left | 65.0]
+    [VIN | p[2] | Right | 65.0]
+    [VCC | p[3] | Left | 15.0]
+    [GND | p[4] | Left | -]
+  ground-pin(self.GND)
+
+pcb-component comp2 :
+  pin-properties :
+    [pin:Ref | pads:Ref ... | side:Dir | rated-voltage:Double]
+    [RUN | p[1] | Left | 65.0]
+    [VIN | p[2] | Right | 65.0]
+    [VCC | p[3] | Left | 15.0]
+
+pcb-module test-sub-mod :
+  inst U3 : comp1
+  inst U4 : comp2
+
+pcb-module test-mod :
+  inst U1 : comp1
+  inst U2 : comp2
+  val C1 = bypass-cap(U2.VCC, 0.1e-6)
+  inst subMod : test-sub-mod
+
+deftest basic-ground-test:
+
+  pcb-module top-level :
+    net gnd ()
+    inst U5 : test-mod
+
+    with-ground(gnd)
+
+  ; for mod in [top-level] do:
+  ;   print-def(mod)
+
+  for comp in component-instances(top-level) do :
+    val compName = name(originating-instantiable(comp))
+    if compName == "comp1" :
+      #EXPECT(connected?(comp.GND))
+
