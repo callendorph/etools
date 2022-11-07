@@ -1,0 +1,21 @@
+defpackage etools/NumTools :
+  import core
+
+public defn to-hex-char (x:Long) -> Char :
+  val digit = to-int(x % 16L)
+  if digit < 10 :
+    to-char(digit + 0x30)
+  else:
+    to-char((digit - 10) + 0x41)
+
+public defn to-hex (x:Long) -> String :
+  val ret = StringBuffer()
+  var curr = x
+  for i in 0 to 16 do :
+    val nextChar = to-hex-char(curr)
+    curr = curr / 16L
+    add(ret, nextChar)
+
+  val revRet = StringBuffer()
+  add-all(revRet, in-reverse(to-seq(ret)))
+  to-string(revRet)
