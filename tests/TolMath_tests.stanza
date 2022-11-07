@@ -214,23 +214,9 @@ deftest tol-divide-inverse :
 
   for testVec in testVecs do :
     val [A, B, expVal] = testVec
+    println("Vals: A: %~ B: %~" % [A,B])
     val obsVal = A / B
     #EXPECT(expVal == obsVal)
-
-  ; Test Exceptional case
-
-  val failVecs = [
-    [{-200.5 / min-max(-1.0, 2.0)}, "Unable to handle the straddle"]
-  ]
-
-  for failVec in failVecs do :
-    ; Test that exceptions throw in the way we expect
-    val [f, msgClip] = failVec
-    val [throws, msg] = expect-throw(f)
-    println("Mesg: %~" % [msg])
-    #EXPECT(throws)
-    #EXPECT(index-of-chars(msg, "Invalid Value") != false)
-    #EXPECT(index-of-chars(msg, msgClip) != false)
 
 deftest tol-divide-tol :
   val testVecs = [
@@ -259,6 +245,11 @@ deftest tol-divide-tol :
       min-typ-max(-2.1, -2.0, -1.9),
       min-typ-max(-5.789, -5.0, -4.286)
     ],
+    [
+      min-max(-4.0, 4.0)
+      min-max(-2.0, -1.0)
+      min-typ-max(-4.0, 0.0, 4.0)
+    ]
   ]
 
   val epsilon = 1.e-3
@@ -268,22 +259,7 @@ deftest tol-divide-tol :
     val eq = almost-equal?(expVal, obsVal, epsilon)
     #EXPECT(eq)
     if not eq :
-      println("Divide: A: %~ B: %~" % [A,B])
-
-  val failVecs = [
-    [{min-max(1.0, 4.0) / min-max(-1.0, 2.0)}, "Unable to handle the straddle"]
-    [{min-max(-4.0, 4.0) / min-max(-2.0, -1.0)}, "Unable to handle the straddle"]
-  ]
-
-  for failVec in failVecs do :
-    ; Test that exceptions throw in the way we expect
-    val [f, msgClip] = failVec
-    val [throws, msg] = expect-throw(f)
-    println("Mesg: %~" % [msg])
-    #EXPECT(throws)
-    #EXPECT(index-of-chars(msg, "Invalid Value") != false)
-    #EXPECT(index-of-chars(msg, msgClip) != false)
-
+      println("Divide: A: %~ B: %~ obs: %~ exp: %~" % [A,B, obsVal, expVal])
 
 deftest tol-union-op :
   val testVecs = [
