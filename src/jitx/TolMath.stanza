@@ -22,6 +22,9 @@ public defn times (A:Toleranced, B:Double) -> Toleranced :
 public defn divide (A:Toleranced, B:Double) -> Toleranced :
   A  * (1.0 / B)
 
+public defn apply (f:Double -> Double, A:Toleranced) -> Toleranced : 
+  min-typ-max(f(min-value(A)), f(typ-value(A)), f(max-value(A)))
+
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; Comparison Operators
 ;;
