@@ -1,8 +1,7 @@
 defpackage etools/NumTools :
   import core
 
-public defn to-hex-char (x:Long) -> Char :
-  val digit = to-int(x % 16L)
+public defn to-hex-char (digit:Int) -> Char :
   if digit < 10 :
     to-char(digit + 0x30)
   else:
@@ -10,9 +9,17 @@ public defn to-hex-char (x:Long) -> Char :
 
 public defn to-hex (x:Long) -> String :
   val ret = StringBuffer()
+  val is-neg = x < 0L
   var curr = x
+  if is-neg:
+    ; We extract out the sign flag and then add it back in
+    ; to the final nibble. Otherwise it throws the math off.
+    curr = curr & (~ 0x8000000000000000L)
   for i in 0 to 16 do :
-    val nextChar = to-hex-char(curr)
+    var nibble = to-int(curr % 16L)
+    if i == 15 and is-neg:
+      nibble = nibble | 0x8
+    val nextChar = to-hex-char(nibble)
     curr = curr / 16L
     add(ret, nextChar)
 

@@ -1,0 +1,22 @@
+#use-added-syntax(tests)
+defpackage etools/NumTools-tests :
+  import core
+  import etools/NumTools
+  import etools/TestTools
+
+deftest(numtools) to-hex-test:
+  val inVecs:Tuple<[Long,String]> = [
+    [0xFF00FFL,            "0000000000FF00FF" ],
+    [0x10CC00BBL,          "0000000010CC00BB" ],
+    [0xA03010FF00FFL,        "0000A03010FF00FF" ],
+    [0x3010EE00DDL,        "0000003010EE00DD" ],
+    [0x1020003010FF00FFL,  "1020003010FF00FF" ],
+    [0x8000000000004321L,  "8000000000004321" ],
+    [0x0000000000000001L,  "0000000000000001" ],
+  ]
+
+  for inVec in inVecs do :
+    val [v, exp] = inVec
+    val obs = to-hex(v)
+    #EXPECT(obs == exp)
+
