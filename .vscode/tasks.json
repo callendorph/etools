@@ -11,6 +11,7 @@
                 "${workspaceFolder}/tests/ESeries_tests.stanza",
                 "${workspaceFolder}/tests/ESeries_jitx_tests.stanza",
                 "${workspaceFolder}/tests/TolMath_tests.stanza",
+                "${workspaceFolder}/tests/NumTools_tests.stanza",
             ],
             "group": "test",
             "presentation": {
