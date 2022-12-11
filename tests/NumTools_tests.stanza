@@ -20,3 +20,18 @@ deftest(numtools) to-hex-test:
     val obs = to-hex(v)
     #EXPECT(obs == exp)
 
+
+deftest(numtools) saturate-test:
+
+  val inVecs = [
+    [1.0, 0.0, 1.0, 1.0]
+    [0.0, 0.0, 1.0, 0.0]
+    [0.5, 0.0, 1.0, 0.5]
+    [2.5, 0.0, 1.0, 1.0]
+    [-0.1, 0.0, 1.0, 0.0]
+  ]
+
+  for inVec in inVecs do:
+    val [x, minV, maxV, exp] = inVec
+    val obs = saturate(x, minV, maxV)
+    #EXPECT(obs == exp)
