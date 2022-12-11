@@ -1,0 +1,65 @@
+#use-added-syntax(tests)
+#use-added-syntax(jitx)
+defpackage etools/Geometry/jitx-tests :
+  import core
+  import jitx
+  import etools/jitx/Geometry
+
+val epsilon = 1.0e-3
+#if-defined(TESTING) :
+  defn almost-equal (obs:Double, exp:Double) -> True|False :
+    abs(obs - exp) < epsilon
+
+  defn almost-equal (obs:Point, exp:Point) -> True|False :
+    almost-equal(x(obs), x(exp)) and almost-equal(y(obs), y(exp))
+
+  defn check-pts (obs:Tuple<Point>, exp:Tuple<Point>) :
+    #EXPECT(length(exp) == length(obs))
+
+    for i in 0 to length(exp) do:
+      val o = obs[i]
+      val e = exp[i]
+      #EXPECT(almost-equal(o,e))
+
+deftest(geometry) rect-to-points-test :
+  var uut = Rectangle(5.0, 6.0, loc(2.0, 3.0))
+
+  var pts = to-points(uut)
+  var expPts = [
+    Point(4.5, 6.0),
+    Point(-0.5, 6.0),
+    Point(-0.5, 0.0),
+    Point(4.5, 0.0)
+  ]
+
+  check-pts(pts, expPts)
+
+  uut = Rectangle(5.0, 6.0, loc(1.0, 1.0, 45.0))
+
+  pts = to-points(uut)
+  ; used shapely to generate test data.
+  expPts = [
+     Point(0.6464466094067264, 4.889087296526012),
+     Point(-2.8890872965260113, 1.353553390593274),
+     Point(1.3535533905932735, -2.8890872965260113),
+     Point(4.889087296526011, 0.6464466094067257)
+  ]
+
+  check-pts(pts, expPts)
+
+deftest(geometry) rect-intersects?-test :
+
+  val inputVecs = [
+    [Rectangle(5.0, 6.0, loc(2.0, 3.0)), Rectangle(5.0, 6.0, loc(2.0, 3.0)), true],
+    [Rectangle(5.0, 6.0, loc(2.0, 3.0)), Rectangle(5.0, 6.0, loc(2.0, 3.0, 45.0)), true],
+    [Rectangle(5.0, 6.0, loc(2.0, 3.0)), Rectangle(5.0, 6.0, loc(20.0, 30.0)), false],
+    [Rectangle(6.0, 6.0, loc(0.0, 0.0, 45.0)), Rectangle(6.0, 6.0, loc(5.0, 5.0, 45.0)), false],
+    [Rectangle(6.0, 6.0, loc(0.0, 0.0, 45.0)), Rectangle(6.0, 6.0, loc(5.0, 0.0, 45.0)), true],
+    [Rectangle(5.0, 6.0), Rectangle(2.0, 2.0, loc(-2.0, -2.0)), true],
+  ]
+
+  for inVec in inputVecs do :
+    val [A,B,exp] = inVec
+    val obs = intersects?(A,B)
+    ;println("Test: A=%~ B=%~ Exp=%~ Obs=%~" % [A,B,exp,obs])
+    #EXPECT( exp == obs )
