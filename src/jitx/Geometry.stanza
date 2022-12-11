@@ -1,0 +1,75 @@
+#use-added-syntax(jitx)
+defpackage etools/jitx/Geometry :
+  import core
+  import jitx
+
+; This package contains tools for working with Geometry in JITx.
+; See here:
+;   https://docs.jitx.com/reference/statements/gstmt/shape.html
+
+public defn elem-times (A:Point, B:Point) -> Point :
+  ; Element wise multiplication of two Point objects.
+  Point(x(A) * x(B), y(A) * y(B))
+
+public defn dot (A:Point, B:Point) -> Double :
+  ; Take the top product of two points.
+  val t = elem-times(A,B)
+  x(t) + y(t)
+
+public defn to-points (A:Rectangle) -> Tuple<Point> :
+  ; Convert a rectangle into a tuple of Points in
+  ;  cartesian space.
+  val p = pose(A)
+  val w = width(A)
+  val h = height(A)
+  val offsets = [
+    Point(0.5, 0.5),
+    Point(-0.5, 0.5),
+    Point(-0.5, -0.5),
+    Point(0.5, -0.5),
+  ]
+  val pt = Point(w,h)
+  val pts = map({elem-times(_,pt)}, offsets)
+  map({p * _}, pts)
+
+; Support tool for `intersects?`
+defn edgeTest (p1:Point, p2:Point, p3:Point, r2:Tuple<Point>) -> True|False :
+  val e1 = p2 - p1 ; Edge #1
+  val rot = Point((- y(e1)), x(e1)) ; Rotate 90 degrees (Normal)
+  val e2 = p3 - p1 ; Edge #2
+  val ref = dot(rot, e2) >= 0.0
+
+  label<True|False> return :
+    for i in 0 to length(r2) do:
+      val t = r2[i] - p1
+      val d = dot(rot, t) >= 0.0
+      if d == ref :
+        return(false)
+    return(true)
+
+; Separate Axis Test
+; Shamelessly stolen from:
+;  https://gist.github.com/shamansir/3007244
+public defn intersects? (A:Rectangle, B:Rectangle) -> True|False :
+  ; Determine if two rectangles intersect
+  val pA = to-points(A)
+  val pB = to-points(B)
+
+  defn check-edge-seq (args:[Int,Tuple<Point>,Tuple<Point>]) -> True|False :
+    val [i, pA, pB] = args
+    val N = length(pA)
+    val p1 = pA[i]
+    val p2 = pA[(i + 1) % N]
+    val p3 = pA[(i + 2) % N]
+    edgeTest(p1, p2, p3, pB)
+
+  val N = length(pA)
+  label<True|False> return :
+    for i in 0 to N do :
+      if any?(check-edge-seq, [
+        [i, pA, pB],
+        [i, pB, pA]
+      ]):
+        return(false)
+    return(true)
+
