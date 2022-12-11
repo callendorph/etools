@@ -26,3 +26,17 @@ public defn to-hex (x:Long) -> String :
   val revRet = StringBuffer()
   add-all(revRet, in-reverse(to-seq(ret)))
   to-string(revRet)
+
+public defn saturate (x:Double, minV:Double, maxV:Double) -> Double :
+  if x > maxV:
+    maxV
+  else if x < minV :
+    minV
+  else:
+    x
+
+public defn minsat (x:Double, minV:Double) -> Double :
+  saturate(x, minV, DOUBLE-POSITIVE-INFINITY)
+
+public defn maxsat (x:Double, maxV:Double) -> Double :
+  saturate(x, DOUBLE-NEGATIVE-INFINITY, maxV)
