@@ -96,7 +96,7 @@ public defmethod find-in-range (self:ESeries, minV:Double, maxV:Double) -> Tuple
   var ranges:List<Array<Double>> = List()
 
   val series = get-series(self)
-  for i in to-int(minPwr10) to to-int(maxPwr10) + 1 do:
+  for i in to-int(minPwr10) through to-int(maxPwr10) do:
     val RRange = to-array<Double>(series)
     map!(scaled-series{_ , to-double(i)}, RRange)
     ranges = cons(RRange, ranges)
