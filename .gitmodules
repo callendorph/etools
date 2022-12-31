@@ -1,0 +1,3 @@
+[submodule "lbstanza-z3"]
+	path = lbstanza-z3
+	url = ssh://callendorph-github/callendorph/lbstanza-z3

@@ -1,0 +1,248 @@
+defpackage etools/Solvers/VoltageDivider :
+  import core
+  import collections
+  import etools/ESeries
+  import etools/Errors
+  import z3/Context
+  import z3/AST/AST
+  import z3/AST/Vector
+  import z3/Model
+  import z3/Solver
+  import z3/Optimize
+  import z3/Tactics
+  import z3/Shellable
+  import z3/Constrainable
+  import z3/AST/Functions
+  import z3/AST/Numerals
+  import z3/AST/Sets
+  import z3/AST/Operators
+  import z3/Enums/Z3_lbool
+  import etools/Solvers/Utils
+  import etools/Solvers/SeriesSets
+
+
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;; Solvers
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
+public defstruct VoltageDivider:
+  ; Vin ---
+  ;        |
+  ;        R1
+  ;        |
+  ;        ---- Vout
+  ;        |
+  ;        R2
+  ;        |
+  ;       GND
+  Vin : Double
+  TargetVout : Double
+  R1 : False|Double
+  R2 : False|Double
+  MaxCurr : Double
+
+  ; Value Set from which the resistor solution
+  ;   will be chosen.
+  ValueSet : AST
+
+public defn VoltageDivider (Vin:Double, TargetVout:Double, MaxCurr:Double, ValueSet:AST) -> VoltageDivider :
+  VoltageDivider(Vin, TargetVout, false, false, MaxCurr, ValueSet)
+
+
+public defn target-ratio (d:VoltageDivider) -> Double:
+  TargetVout(d) / Vin(d)
+
+public defn min-R (d:VoltageDivider) -> Double :
+  Vin(d) / MaxCurr(d)
+
+public defstruct DividerSolution :
+  R1 : Double
+  R2 : Double
+
+public defn ratio (s:DividerSolution) -> Double :
+  R2(s) / (R1(s) + R2(s))
+
+public defn vout (s:DividerSolution, vin:Double) -> Double :
+  vin * ratio(s)
+
+public defmethod print (o:OutputStream, s:DividerSolution):
+  print(o, "R1: %~   R2: %~" % [R1(s), R2(s)])
+
+
+public defn set-divider-constraints (ctx:Context, c:Constrainable, state:VoltageDivider) -> Tuple<AST> :
+
+  val [r1, r2] = to-tuple(RealVars(ctx, ["R1", "R2"])) as [AST, AST]
+  val [vin, vout] = to-tuple(RealVars(ctx, ["Vin", "Vout"])) as [AST, AST]
+  val targ = RealVar(ctx, "TargetVout")
+
+  val Rset = ValueSet(state)
+  val minR = min-R(state)
+
+  match(R1(state), R2(state)):
+    (x:Double, y:False):
+      ; Peg R1
+      assert-on(c, z-equal?(r1, x))
+      ; Let R2 float inside out value set
+      assert-on(c, mk-set-member?(r2, Rset))
+    (x:False, y:Double):
+      ; Peg R2
+      assert-on(c, z-equal?(r2, y))
+      ; Let R1 float inside out value set
+      assert-on(c, mk-set-member?(r1, Rset))
+    (x:Double, y:Double): throw(InvalidValue("Either R1 or R2 must be False"))
+    (x:False, y:False):
+      ; Bootstrap by picking a range of values for R2 that
+      ;   should work.
+      val ratio = target-ratio(state)
+      val TargR2 = ratio * minR
+      println("Min R: %~   Target R2: %~" % [minR, TargR2])
+      assert-on(c, r2 > (TargR2 * 0.8))
+      ; The Algorithm will pick both R1 and R2 but we want it
+      ;  restricted to the available set of resistor values.
+      assert-on(c, mk-set-member?(r2, Rset))
+      assert-on(c, mk-set-member?(r1, Rset))
+
+  assert-on(c, z-equal?(vin, Vin(state)))
+  assert-on(c, z-equal?(targ, TargetVout(state)))
+
+  assert-on(c, r1 > 0.0)
+  assert-on(c, r2 > 0.0)
+
+  assert-on(c, (r1 + r2) > minR)
+  assert-on(c, z-equal?(vout, vin * (r2 / (r1 + r2))))
+
+  [vin, vout, targ, r1, r2]
+
+
+public defn get-solution (s:Constrainable, r1:AST, r2:AST) -> DividerSolution :
+  val m = get-model(s)
+  println("%~" % [m])
+  val R1Val = to-double(m[r1])
+  val R2Val = to-double(m[r2])
+  val sol = DividerSolution(R1Val, R2Val)
+  sol
+
+public defn create-scenarios (ctx:Context, state:VoltageDivider, Existing:HashSet<Double>, r1:AST, r2:AST) -> List<Scenario> :
+  ; There are a few different scenarios of floating resistor values
+  ;  1. If R1 or R2 is pegged - then we just check
+  ;     the other one can be solved from the existing set.
+  ;  2. If R1 & R2 are floating - then we need to check:
+  ;     1.  Check if we can select both from the existing set.
+  ;     2.  If that fails - check if R1 can be selected from the existing set
+  ;     3.  Else check if R2 can be selected from the existing set.
+  val ExistingSet = to-Z3-set(ctx, Existing)
+  var scenarios = List()
+  ; Base Case - We let the resistors that aren't pegged float
+  ;   and find a solution.
+  scenarios = cons(Scenario("R1 and/or R2 Float", ASTVector(ctx)), scenarios)
+  ; Under different states, we want to set a different set of
+  ;   constraints by which we attempt to solve from the existing
+  ;   resistor set.
+  match(R1(state), R2(state)):
+    (x:Double, y:False):
+      val scene = Scenario(
+        "Select R2 from Existing",
+        ASTVector(ctx, [
+          mk-set-member?(r2, ExistingSet)
+        ]))
+      scenarios = cons(scene, scenarios)
+
+    (x:False, y:Double):
+      val scene = Scenario(
+        "Select R1 from Existing",
+        ASTVector(ctx, [
+          mk-set-member?(r1, ExistingSet)
+        ]))
+      scenarios = cons(scene, scenarios)
+
+    (x:False, y:False):
+
+      val scenes = [
+        Scenario(
+          "Select R1 & R2 from Existing Set",
+          ASTVector(ctx, [
+            mk-set-member?(r1, ExistingSet),
+            mk-set-member?(r2, ExistingSet),
+          ])
+        ),
+        Scenario(
+          "Select R1 from Existing Set & R2 Floats",
+          ASTVector(ctx, [
+            mk-set-member?(r1, ExistingSet),
+          ])
+        ),
+        Scenario(
+          "Select R2 from Existing Set & R1 Floats",
+          ASTVector(ctx, [
+            mk-set-member?(r2, ExistingSet),
+          ])
+        ),
+      ]
+      scenarios = append(scenes, scenarios)
+  scenarios
+
+public defn solve (ctx:Context, state:VoltageDivider, accuracy:Double, Existing:HashSet<Double>) -> Maybe<DividerSolution> :
+  ; Solver a voltage divider equation using the passed existing set of resistors.
+  ; @param state voltage divider goals
+  ; @parram accuracy percent error that we are willing to accept.
+  ; @param Existing available resistors already in the design.
+  if accuracy <= 0.0 :
+    fatal("Accuracy must be percentage greater than zero")
+
+  val s = Solver(ctx)
+
+  val [vin, vout, targ, r1, r2] = set-divider-constraints(ctx, s, state) as [AST, AST, AST, AST, AST]
+
+  ; Use a squared error as our target constraint
+  val err = sq-error-ast(vout, targ)
+  val acc = accuracy / 100.0
+  assert-on(s, err < (acc * acc))
+
+  val scenarios = create-scenarios(ctx, state, Existing, r1, r2)
+
+  val [r, idx] = solve-scenarios(s, to-tuple(scenarios))
+  if r is Z3_L_TRUE:
+    val sol = get-solution(s, r1, r2)
+    One(sol)
+  else:
+    None()
+
+
+public defn optimize (ctx:Context, state:VoltageDivider, Existing:HashSet<Double>) -> Maybe<DividerSolution> :
+  ; Optimize a voltage divider equation using the passed existing set of resistors.
+  ; @NOTE - This will select resistors only from the existing set when applicable.
+  ;   This means that this function may not give you great accuracy depending on what
+  ;   resistance values are in your design at this point.
+  ;   Best to use this function last and only for "Best Effort" where you don't
+  ;   care about accuracy - you just need something, the cheaper the better.
+  ;
+  ; @param state voltage divider goals
+  ; @param Existing available resistors already in the design.
+
+  val s = Optimizer(ctx)
+
+  val [vin, vout, targ, r1, r2] = set-divider-constraints(ctx, s, state) as [AST, AST, AST, AST, AST]
+
+  ; Use a squared error as our target constraint
+  val err = sq-error-ast(vout, targ)
+  minimize(s, err)
+
+  val scenarios = create-scenarios(ctx, state, Existing, r1, r2)
+  val [r, idx] = solve-scenarios(s, to-tuple(scenarios))
+  if r is Z3_L_TRUE:
+    val sol = get-solution(s, r1, r2)
+    One(sol)
+  else:
+    None()
+
+
+
+
+
+
+
+
+
+
+
