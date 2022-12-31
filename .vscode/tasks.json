@@ -13,6 +13,7 @@
                 "${workspaceFolder}/tests/TolMath_tests.stanza",
                 "${workspaceFolder}/tests/NumTools_tests.stanza",
                 "${workspaceFolder}/tests/Geometry_tests.stanza",
+                "${workspaceFolder}/tests/Solvers.stanza",
             ],
             "group": "test",
             "presentation": {

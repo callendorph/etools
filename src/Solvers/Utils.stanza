@@ -1,0 +1,18 @@
+defpackage etools/Solvers/Utils :
+  import core
+  import z3/AST/AST
+  import z3/AST/Operators
+
+public defn parallel-R (r1:Double|AST, r2:Double|AST) -> Double|AST :
+  ; Compute equivalent resistance of two parallel resistors
+  (r1 * r2) / (r1 + r2)
+
+public defn parallel-R (Rs:Tuple<AST>) -> AST :
+  ; Compute the equivalent resistance of multiple parallel
+  ;   resistors as AST in a solver equation.
+  1.0 / sum(map({ 1.0 / _ }, Rs))
+
+public defn sq-error-ast (obs:AST, exp:AST) -> AST :
+  ; Compute the squared error between the observed and the
+  ;  expected value.
+  pow((exp - obs) / exp, 2.0)

@@ -1,0 +1,40 @@
+defpackage etools/Solvers/SeriesSets :
+  import core
+  import collections
+  import etools/ESeries
+  import etools/Errors
+  import z3/Context
+  import z3/AST/AST
+  import z3/AST/Sets
+
+; Resistor/Capacitor/Inductor Sets
+;  The following functions are used to create
+; Z3 set that can be used to limit the solution
+; space to only available resistor values.
+
+public defn ESeries-set (ctx:Context, series:ESeries, exp:Double) -> AST :
+  val values = map(scaled-series{_, exp}, get-series(series))
+  create-real-set(ctx, values)
+
+public defn ESeries-set (ctx:Context, series:ESeries, minV:Double, maxV:Double) -> AST :
+  ; Create a Real-valued set sort that contains the ESeries values between
+  ;  the min and max values provided.
+  val values = find-in-range(series, minV, maxV)
+  create-real-set(ctx, values)
+
+public defn OpAmp-set (ctx:Context, series:ESeries) -> AST :
+  ; For opamps, because of the range of currents and the input
+  ;   and output impedances, we want particular ranges of
+  ;   resistor values used.
+  ESeries-set(ctx, series, 10.0e3, 600.0e3)
+
+
+; Existing Set - We use a HashSet to contain the
+;   values and then convert to an AST because the Z3
+;   Set AST, while impemented as an array, is not easy to
+;   interrogate for values.
+
+public defn to-Z3-set (ctx:Context, hset:HashSet<Double>) -> AST :
+  val values = to-tuple(to-seq(hset))
+  create-real-set(ctx, values)
+

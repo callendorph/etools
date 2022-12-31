@@ -1,3 +1,4 @@
+include "lbstanza-z3/stanza.proj"
 packages etools/* defined-in "src/"
 import etools/jitx/ESeries when-imported (etools/ESeries, jitx)
 import etools/jitx/TolMath when-imported (jitx)

@@ -1,0 +1,70 @@
+#use-added-syntax(tests)
+defpackage etools/Solvers-tests :
+  import core
+  import collections
+  import etools/Solvers/VoltageDivider
+  import etools/Solvers/SeriesSets
+  import etools/ESeries
+  import z3/Context
+  import z3/Solver
+
+deftest(solvers) test-solve-with-existing :
+
+  val cfg = Config()
+  val ctx = Context(cfg)
+
+  val series = E96()
+  val Rset = ESeries-set(ctx, series, 10.0e3, 400.0e3)
+
+  val Existing = HashSet<Double>()
+  add(Existing, 47.0e3)
+  add(Existing, 4.7e3)
+  ; We expect the solver to use R1 as this value
+  add(Existing, 54.9e3)
+
+  val div = VoltageDivider(24.0, 6.0, 500.0e-6, Rset)
+
+  val out = solve(ctx, div, 1.0, Existing)
+
+  match(out):
+    (_:None):
+      println("Failed to Find Solution")
+      #EXPECT(1 == 0)
+    (o:One<DividerSolution>):
+      val x = value(o)
+      println("Solution: %~" % [x])
+      println("Vout=%~" % [vout(x, Vin(div))])
+      #EXPECT(R1(x) == 54900.0)
+      #EXPECT(R2(x) == 18200.0)
+
+
+deftest(solvers) test-optim-with-existing :
+
+  val cfg = Config()
+  val ctx = Context(cfg)
+
+  val series = E96()
+  val Rset = ESeries-set(ctx, series, 10.0e3, 400.0e3)
+
+  val Existing = HashSet<Double>()
+  ; add(Existing, 100.0e3)
+  add(Existing, 47.0e3)
+  add(Existing, 4.7e3)
+  add(Existing, 18.2e3)
+  add(Existing, 54.9e3)
+
+  val div = VoltageDivider(24.0, 6.0, 500.0e-6, Rset)
+
+  val out = optimize(ctx, div, Existing)
+
+  match(out):
+    (_:None):
+      println("Failed to Find Solution")
+      #EXPECT(1 == 0)
+    (o:One<DividerSolution>):
+      val x = value(o)
+      println("Solution: %~" % [x])
+      println("Vout=%~" % [vout(x, Vin(div))])
+      #EXPECT(R1(x) == 54900.0)
+      #EXPECT(R2(x) == 18200.0)
+
