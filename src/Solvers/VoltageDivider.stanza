@@ -82,12 +82,12 @@ public defn set-divider-constraints (ctx:Context, c:Constrainable, state:Voltage
   match(R1(state), R2(state)):
     (x:Double, y:False):
       ; Peg R1
-      assert-on(c, z-equal?(r1, x))
+      assert-on(c, r1 == x)
       ; Let R2 float inside out value set
       assert-on(c, mk-set-member?(r2, Rset))
     (x:False, y:Double):
       ; Peg R2
-      assert-on(c, z-equal?(r2, y))
+      assert-on(c, r2 == y)
       ; Let R1 float inside out value set
       assert-on(c, mk-set-member?(r1, Rset))
     (x:Double, y:Double): throw(InvalidValue("Either R1 or R2 must be False"))
@@ -103,14 +103,14 @@ public defn set-divider-constraints (ctx:Context, c:Constrainable, state:Voltage
       assert-on(c, mk-set-member?(r2, Rset))
       assert-on(c, mk-set-member?(r1, Rset))
 
-  assert-on(c, z-equal?(vin, Vin(state)))
-  assert-on(c, z-equal?(targ, TargetVout(state)))
+  assert-on(c, vin == Vin(state))
+  assert-on(c, targ == TargetVout(state))
 
   assert-on(c, r1 > 0.0)
   assert-on(c, r2 > 0.0)
 
   assert-on(c, (r1 + r2) > minR)
-  assert-on(c, z-equal?(vout, vin * (r2 / (r1 + r2))))
+  assert-on(c, vout == vin * (r2 / (r1 + r2)))
 
   [vin, vout, targ, r1, r2]
 
