@@ -1,0 +1,99 @@
+#use-added-syntax(jitx)
+#use-added-syntax(tests)
+defpackage etools/Network-tests :
+  import core
+  import collections
+  import jitx
+  import jitx/commands
+  import etools/jitx/Network
+
+public pcb-component res :
+
+  manufacturer     = "Test"
+  description      = "test resistor"
+  reference-prefix = "R"
+  mpn = "asdf"
+
+; Use unified generator to create pins
+  port p : pin[[1 2]]
+
+public pcb-component cap :
+  manufacturer     = "Test"
+  description      = "test resistor"
+  reference-prefix = "C"
+  mpn = "asdf"
+
+; Use unified generator to create pins
+  port p : pin[[1 2]]
+
+
+public pcb-component diode :
+
+  manufacturer     = "Test"
+  description      = "test resistor"
+  reference-prefix = "D"
+  mpn = "asdf"
+
+; Use unified generator to create pins
+  port c : pin
+  port a : pin
+
+
+deftest(network) test-basic :
+
+  val a = Component(res)
+  val b = Component(diode)
+  val series = Series([a,b])
+
+  pcb-module test:
+    val circuit = make-circuit(series)
+    inst c : circuit
+    println("Circuit: %~" % [circuit])
+
+  print-def(test)
+  println("Done")
+
+deftest(network) test-operators :
+
+  val a = Component(res)
+  val b = Component(diode)
+  val series = a + b + (a|b|cap)
+
+  pcb-module test:
+    val circuit = make-circuit(series)
+    inst c : circuit
+    println("Circuit: %~" % [circuit])
+
+  print-def(test)
+  println("Done")
+
+deftest(network) test-invert :
+
+  pcb-module test:
+    val a = Component(res)
+    val b = Component(diode)
+    val series = a + Invert(b) + a + (~ b)
+
+    val circuit = make-circuit(series)
+    inst c : circuit
+    println("Circuit: %~" % [circuit])
+
+  print-def(test)
+  println("Done")
+
+
+deftest(network) test-shunt :
+
+  pcb-module test:
+    port asdf : pin
+    net gnd (asdf)
+    val a = Component(res)
+    val series = a + (Shunt(gnd, Comp(cap)))
+
+    val circuit = make-circuit(series)
+    inst c : circuit
+    println("Circuit: %~" % [circuit])
+
+  print-def(test)
+  println("Done")
+
