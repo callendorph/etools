@@ -4,6 +4,7 @@ defpackage etools/jitx/Network :
   import collections
   import jitx
   import jitx/commands
+  import etools/jitx/CanonicalGround
 
 
 ; The concept of this code is to provide a means for defining a lumped
@@ -19,17 +20,21 @@ defpackage etools/jitx/Network :
 ;
 ;  1.  Series (+) - string multiple elements in series
 ;  2.  Parallel (|) - put multiple elements in parallel
-;  3.  Shunt - Connect a given node to a particular net through an element
-;         (For example, shunt to ground). Could also describe a pullup if needed.
+;  3.  Shunt Ground - Connect a given node to ground through an element
+;         This uses the `CanonicalGround` concept because `net` objects
+;         can't easily passed into the network. To connect to things other
+;         than ground - Taps are a tool for accomplishing this.
 ;  5.  Invert (~) - Instead of connecting 1 -> 2 , connect 2 -> 1. reverses the
 ;        orientation of the component. Useful for polarizing caps, diodes, etc.
+;  6.  TAP - For a particular node in the design
 
 public defenum NetOp:
   COMPONENT
   SERIES
   PARALLEL
-  SHUNT
+  SHUNT-GND
   INVERT
+  TAP
 
 ; ANT = Abstract Network Tree
 ;   ANT are the elements of the tree that might look something like this:
@@ -58,6 +63,29 @@ public defn Component (i:Instantiable) -> Component:
 
 public defn Comp (i:Instantiable) -> Component:
   Component(i)
+
+public deftype Tap <: ANT
+public defmulti get-name (a:ANT) -> String
+public defmulti get-pin-index (a:ANT) -> Int
+
+public defn Tap (name:String, a:ANT, pIndex:Int) -> Tap :
+  val n = name
+  val elem = a
+  if pIndex != 1 and pIndex != 2:
+    fatal("Invalid Pin Index for Tap - Must 1 or 2")
+
+  val idx = pIndex
+
+  new Tap:
+    defmethod get-op (this) : COMPONENT
+    defmethod get-elements (this) : [elem]
+    defmethod get-name (this) : n
+    defmethod get-pin-index (this) : idx
+    defmethod print (o:OutputStream, this):
+      print(o, "Tag(name='%_', idx=%_, %~)" % [n, idx, elem])
+
+public defn Tap (name:String, a:ANT) -> Tap :
+  Tap(name, a, 1)
 
 public deftype ANTVector <: ANT & Lengthable
 public defmulti add (v:ANTVector, elem:ANT) -> False
@@ -108,19 +136,16 @@ public defn Parallel (elems:Tuple<ANT>) -> Parallel:
 public defn Parallel () -> Parallel :
   Parallel([])
 
-public deftype Shunt <: ANT
-public defmulti get-net (s:Shunt) -> JITXObject
+public deftype ShuntGround <: ANT
 
-public defn Shunt (n:JITXObject, a:ANT) -> Shunt :
+public defn ShuntGround (a:ANT) -> Shunt :
   val elem = a
-  val _net = n
 
   new Shunt :
-    defmethod get-op (this) : SHUNT
+    defmethod get-op (this) : SHUNT-GND
     defmethod get-elements (this) : [elem]
-    defmethod get-net (this) : _net
     defmethod print (o:OutputStream, this) :
-      print(o, "Shunt(%~, net=%~)" % [a, n])
+      print(o, "ShuntGround(%~)" % [a])
 
 public deftype Invert <: ANT
 
@@ -162,14 +187,14 @@ public defn get-pins (obj:JITXObject) -> [JITXObject, JITXObject] :
     (_:None):
       [obj.p[1], obj.p[2]]
 
-public defn extrapolate-all (a:ANTVector) -> Seq<[JITXObject, JITXObject]> :
+public defn extrapolate-all (a:ANTVector, taps:Vector<[String,JITXObject]>) -> Seq<[JITXObject, JITXObject]> :
   inside pcb-module:
     for elem in get-elements(a) seq:
-      extrapolate(elem)
+      extrapolate(elem, taps)
 
-public defn connect-series (a:Series) -> [JITXObject, JITXObject] :
+public defn connect-series (a:Series, taps:Vector<[String,JITXObject]>) -> [JITXObject, JITXObject] :
   inside pcb-module:
-    val pinSets = to-tuple(extrapolate-all(a))
+    val pinSets = to-tuple(extrapolate-all(a, taps))
     val cnt = length(pinSets)
 
     ; Series connect all of the components
@@ -179,15 +204,14 @@ public defn connect-series (a:Series) -> [JITXObject, JITXObject] :
     ; Return the first pin and the last pin
     [pinSets[0][0], pinSets[cnt - 1][1]]
 
-public defn connect-parallel (a:Parallel) -> [JITXObject, JITXObject] :
+public defn connect-parallel (a:Parallel, taps:Vector<[String,JITXObject]>) -> [JITXObject, JITXObject] :
   inside pcb-module:
-    val pinSets = to-tuple(extrapolate-all(a))
+    val pinSets = to-tuple(extrapolate-all(a, taps))
     val cnt = length(pinSets)
 
     ; @TODO - for `shunt` to really do anything - I think I need to
-    ;    check if any of the pins are already connected.
-    ;    If one of the pins is already connected - then we should
-    ;    filter it out from this set.
+    ;    check if any of the pins are already connected to ground.
+    ;    We should filter out any that have the canonical-ground property
     val p1Set = map(get{_, 0}, pinSets)
     val p2Set = map(get{_, 1}, pinSets)
     net (p1Set)
@@ -195,15 +219,15 @@ public defn connect-parallel (a:Parallel) -> [JITXObject, JITXObject] :
 
     [p1Set[0], p2Set[0]]
 
-public defn extrapolate (a:ANT) -> [JITXObject, JITXObject] :
+public defn extrapolate (a:ANT, taps:Vector<[String,JITXObject]>) -> [JITXObject, JITXObject] :
   inside pcb-module :
     match(a) :
       (s:Series):
         ; println("Extrapolate Series: %~" % [s])
-        connect-series(s)
+        connect-series(s, taps)
       (s:Parallel):
         ;println("Extrapolate Parallel: %~" % [s])
-        connect-parallel(s)
+        connect-parallel(s, taps)
       (s:Component):
         ;println("Extrapolate Component: %~" % [s])
         inst obj : get-value(s)
@@ -211,7 +235,7 @@ public defn extrapolate (a:ANT) -> [JITXObject, JITXObject] :
       (s:Shunt):
         ;println("Extrapolate Shunt: %~" % [s])
         val child = get-elements(s)[0]
-        val [p1, p2] = extrapolate(child)
+        val [p1, p2] = extrapolate(child, taps)
         val n = get-net(s)
         ;println("Net: %~" % [n])
         net (p2, n)
@@ -219,17 +243,35 @@ public defn extrapolate (a:ANT) -> [JITXObject, JITXObject] :
       (s:Invert):
         ;println("Extrapolate Invert: %~" % [s])
         val child = get-elements(s)[0]
-        val [p1, p2] = extrapolate(child)
+        val [p1, p2] = extrapolate(child, taps)
         [p2, p1]
+      (s:Tap):
+        val child = get-elements(s)[0]
+        val childPins = extrapolate(child, taps)
+        ; val [p1, p2] = extrapolate(child, taps)
+        ; Add the tap here.
+        val tapPin = childPins[ get-pin-index(s) - 1 ]
+        val name = get-name(s)
+        add(taps, [name, tapPin])
+        childPins
 
 public defn make-circuit (a:ANT) -> Instantiable :
 
   pcb-module network-circuit:
-    ; pin p[[1 2]]
     port p : pin[[1 2]]
-    val [p1, p2] = extrapolate(a)
+    val taps = Vector<[String,JITXObject]>()
+    val [p1, p2] = extrapolate(a, taps)
     net (p[1], p1)
     net (p[2], p2)
+
+    ; Programmatically create ports for all the
+    ;   taps
+    for tap in taps do:
+      val [name, pinObj] = tap
+      if name == "p":
+        fatal("Invalid Tap Name '%_' - Must be unique in 'network-circuit'")
+      val namedPort = make-port(to-symbol(name), SinglePin())
+      net (namedPort, pinObj)
 
   network-circuit
 

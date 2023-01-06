@@ -97,3 +97,17 @@ deftest(network) test-shunt :
   print-def(test)
   println("Done")
 
+deftest(network) test-taps :
+
+  val a = Component(res)
+  val b = Component(diode)
+  val series = a + b + Tap("divOut", (a|b|cap))
+
+  pcb-module test:
+    val circuit = make-circuit(series)
+    inst c : circuit
+    println("Circuit: %~" % [circuit])
+    net (c.p[2], c.divOut)
+
+  print-def(test)
+  println("Done")
