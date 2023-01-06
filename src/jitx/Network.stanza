@@ -138,10 +138,10 @@ public defn Parallel () -> Parallel :
 
 public deftype ShuntGround <: ANT
 
-public defn ShuntGround (a:ANT) -> Shunt :
+public defn ShuntGround (a:ANT) -> ShuntGround :
   val elem = a
 
-  new Shunt :
+  new ShuntGround :
     defmethod get-op (this) : SHUNT-GND
     defmethod get-elements (this) : [elem]
     defmethod print (o:OutputStream, this) :
@@ -209,11 +209,17 @@ public defn connect-parallel (a:Parallel, taps:Vector<[String,JITXObject]>) -> [
     val pinSets = to-tuple(extrapolate-all(a, taps))
     val cnt = length(pinSets)
 
-    ; @TODO - for `shunt` to really do anything - I think I need to
-    ;    check if any of the pins are already connected to ground.
-    ;    We should filter out any that have the canonical-ground property
-    val p1Set = map(get{_, 0}, pinSets)
-    val p2Set = map(get{_, 1}, pinSets)
+    ; Often it is useful to have a `ShuntGround` in the parallel components.
+    ;   If we force this to connect in parallel though - it means all the
+    ;   components get connected to ground which is probably not what we want.
+    ;   So this filters out any pins with `canonical-ground` connections.
+    val notGrounded = {not is-grounded?(_)}
+    defn filter-pins (pSet:Tuple<[JITXObject, JITXObject]>, pinIdx:Int) :
+      to-tuple(filter(notGrounded, map(get{_, pinIdx}, pSet)))
+
+    val p1Set = filter-pins(pinSets, 0)
+    val p2Set = filter-pins(pinSets, 1)
+
     net (p1Set)
     net (p2Set)
 
@@ -232,13 +238,11 @@ public defn extrapolate (a:ANT, taps:Vector<[String,JITXObject]>) -> [JITXObject
         ;println("Extrapolate Component: %~" % [s])
         inst obj : get-value(s)
         get-pins(obj)
-      (s:Shunt):
+      (s:ShuntGround):
         ;println("Extrapolate Shunt: %~" % [s])
         val child = get-elements(s)[0]
         val [p1, p2] = extrapolate(child, taps)
-        val n = get-net(s)
-        ;println("Net: %~" % [n])
-        net (p2, n)
+        ground-pin(p2)
         [p1, p2]
       (s:Invert):
         ;println("Extrapolate Invert: %~" % [s])
@@ -311,6 +315,3 @@ public defn bit-or (a:ANT, b:Instantiable) -> ANT :
 
 public defn bit-or (a:Instantiable, b:ANT) -> ANT :
   Parallel([Comp(a), b])
-
-public defn shift-right (a:ANT, n:JITXObject) -> ANT :
-  Shunt(n, a)
