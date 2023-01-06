@@ -86,9 +86,8 @@ deftest(network) test-shunt :
 
   pcb-module test:
     port asdf : pin
-    net gnd (asdf)
     val a = Component(res)
-    val series = a + (Shunt(gnd, Comp(cap)))
+    val series = a + (ShuntGround(Comp(cap)))
 
     val circuit = make-circuit(series)
     inst c : circuit
@@ -96,6 +95,22 @@ deftest(network) test-shunt :
 
   print-def(test)
   println("Done")
+
+deftest(network) test-complex-shunt :
+
+  pcb-module test:
+    port asdf : pin
+    val a = Component(res)
+    val b = Component(diode)
+    val series = a + (b | ShuntGround(Comp(cap)))
+
+    val circuit = make-circuit(series)
+    inst c : circuit
+    println("Circuit: %~" % [circuit])
+
+  print-def(test)
+  println("Done")
+
 
 deftest(network) test-taps :
 
