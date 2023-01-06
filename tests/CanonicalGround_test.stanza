@@ -28,6 +28,8 @@ pcb-module test-sub-mod :
 
 pcb-module test-mod :
   inst U1 : comp1
+  if not is-grounded?(U1.GND):
+    fatal("Expected Grounded Pin Here")
   inst U2 : comp2
   val C1 = bypass-cap(U2.VCC, 0.1e-6)
   inst subMod : test-sub-mod

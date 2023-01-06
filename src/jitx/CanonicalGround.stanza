@@ -32,6 +32,16 @@ public defn disable-ground-pin (p : JITXObject ) :
     if has-property?(p.canonical-gorund) :
       property(p.canonical-ground) = false
 
+public defn is-grounded? (p:JITXObject) -> True|False :
+  inside pcb-component :
+    ; if has-property?(p.canonical-ground):
+    ;   val ret:True|False = property(p.canonical-ground)
+    ;   ret
+    ; else:
+    ;   false
+    has-property?(p.canonical-ground) and property(p.canonical-ground)
+
+
 public defn shunt-comp (p:JITXObject, make-comp, params : Tuple<KeyValue>):
   ; Shunt Component to ground through the generated component definition
   ;  created by `make-comp`
@@ -67,19 +77,18 @@ public defn with-ground (gnd : Net) :
   ;
   ; This function will go through all of the components and sub-modules
   ;   in the module where this function is called. For each component
-  ;   or sub-module - we will  look for the "canonical-ground" property. 
+  ;   or sub-module - we will  look for the "canonical-ground" property.
   ; If:
   ;   1. The property is found
   ;   2. and the property is true
   ;  We will connect to the passed ground Net object.
-  ; 
+  ;
   ; @NOTE - We can't check for `connected?` on the pin of the module
-  ;   or component because for sub-modules, the pin will likely be 
+  ;   or component because for sub-modules, the pin will likely be
   ;   connected to something internal to the module.
   ;  and true - then we will
   inside pcb-module:
     for i in instances(self) do :
       for p in pins(i) do :
-        if has-property?(p.canonical-ground) :
-          if property(p.canonical-ground) :
-            net (gnd, p)
+        if is-grounded?(p):
+          net (gnd, p)
