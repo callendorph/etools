@@ -14,6 +14,8 @@
                 "${workspaceFolder}/tests/NumTools_tests.stanza",
                 "${workspaceFolder}/tests/Geometry_tests.stanza",
                 "${workspaceFolder}/tests/Solvers.stanza",
+                "${workspaceFolder}/tests/Network.stanza",
+                "${workspaceFolder}/tests/CanonicalGround_test.stanza",
             ],
             "group": "test",
             "presentation": {
