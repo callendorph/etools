@@ -273,7 +273,7 @@ public defn make-circuit (a:ANT) -> Instantiable :
     for tap in taps do:
       val [name, pinObj] = tap
       if name == "p":
-        fatal("Invalid Tap Name '%_' - Must be unique in 'network-circuit'")
+        fatal("Invalid Tap Name '%_' - Must be unique in 'network-circuit'" % [name])
       val namedPort = make-port(to-symbol(name), SinglePin())
       net (namedPort, pinObj)
 
