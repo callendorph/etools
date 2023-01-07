@@ -5,6 +5,7 @@ defpackage etools/CanonicalGround/jitx-tests :
   import jitx
   import jitx/commands
   import etools/jitx/CanonicalGround
+  import etools/jitx/Utils
 
 pcb-component comp1 :
   pin-properties :
@@ -23,28 +24,36 @@ pcb-component comp2 :
     [VCC | p[3] | Left | 15.0]
 
 pcb-module test-sub-mod :
-  inst U3 : comp1
-  inst U4 : comp2
+  public inst U3 : comp1
+  public inst U4 : comp2
 
 pcb-module test-mod :
-  inst U1 : comp1
+  public inst U1 : comp1
   if not is-grounded?(U1.GND):
     fatal("Expected Grounded Pin Here")
-  inst U2 : comp2
+  public inst U2 : comp2
   val C1 = bypass-cap(U2.VCC, 0.1e-6)
-  inst subMod : test-sub-mod
+  public inst subMod : test-sub-mod
 
 deftest basic-ground-test:
 
   pcb-module top-level :
-    net gnd ()
+    pin asdf ; This is only here so that I can call "connected-pins"
+    net gnd (asdf)
     inst U5 : test-mod
 
     with-ground(gnd)
 
+    val gpins = connected-pins(asdf)
+    ; val pinRefs = map(ref, gpins)
+    ; println("Pins: %," % [pinRefs])
+    #EXPECT(length(connected-pins(asdf)) == 3)
+
   ; for mod in [top-level] do:
   ;   print-def(mod)
 
+  ; @TODO - This is primarily needed to make sure that the
+  ;   top-level gets exercised.
   for comp in component-instances(top-level) do :
     val compName = name(originating-instantiable(comp))
     if compName == "comp1" :

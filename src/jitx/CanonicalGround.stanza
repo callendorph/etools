@@ -4,6 +4,7 @@ defpackage etools/jitx/CanonicalGround :
   import jitx
   import jitx/commands
   import ocdb/utils/generic-components
+  import etools/jitx/Utils
 
 ;;;;;;;;;;;;;;;;;;;;;;;
 ;
@@ -34,13 +35,7 @@ public defn disable-ground-pin (p : JITXObject ) :
 
 public defn is-grounded? (p:JITXObject) -> True|False :
   inside pcb-component :
-    ; if has-property?(p.canonical-ground):
-    ;   val ret:True|False = property(p.canonical-ground)
-    ;   ret
-    ; else:
-    ;   false
     has-property?(p.canonical-ground) and property(p.canonical-ground)
-
 
 public defn shunt-comp (p:JITXObject, make-comp, params : Tuple<KeyValue>):
   ; Shunt Component to ground through the generated component definition
@@ -88,7 +83,7 @@ public defn with-ground (gnd : Net) :
   ;   connected to something internal to the module.
   ;  and true - then we will
   inside pcb-module:
-    for i in instances(self) do :
+    for i in instances-rec(self) do :
       for p in pins(i) do :
         if is-grounded?(p):
           net (gnd, p)
