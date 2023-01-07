@@ -1,0 +1,21 @@
+#use-added-syntax(jitx)
+defpackage etools/jitx/Utils :
+  import core
+  import jitx
+  import jitx/commands
+
+public defn instances-rec (mod) -> Seq<JITXObject> :
+  ; Generate a recursive sequence of all the components,
+  ;  modules, etc in the passed module.
+  ; mod could be a JITXObject (instance) or an Instantiable (module definition)
+  ;
+  ; @NOTE - this is primarily to make up for a short coming in the JITx API
+  ;   I think they are planning to address this with a recursive implementation
+  ;   of instances of their own. We can remove at some time in the future.
+  generate<JITXObject>:
+    for child in instances(mod) do:
+      yield(child)
+      for i in instances-rec(child) do :
+        yield(i)
+
+
