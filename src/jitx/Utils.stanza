@@ -19,3 +19,13 @@ public defn instances-rec (mod) -> Seq<JITXObject> :
         yield(i)
 
 
+public defn to-tuple (x:Instance) -> Tuple<JITXObject> :
+  ; Convert an Instance object into a tuple of objects.
+  ;  Components & Modules are unpackaged into unit-length tuples
+  ;  Instance Arrays are unpacked into a tuple of instances.
+  match(instance-type(x)):
+    (_:SingleModule): [x]
+    (_:SingleComponent): [x]
+    (_:InstanceArray):
+      to-tuple $ for i in 0 to length(x) seq: x[i]
+
