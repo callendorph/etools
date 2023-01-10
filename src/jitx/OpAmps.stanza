@@ -1,0 +1,247 @@
+#use-added-syntax(jitx)
+defpackage etools/jitx/OpAmps :
+  import core
+  import jitx
+  import jitx/commands
+  import etools/jitx/Network
+  import ocdb/utils/symbols
+  import ocdb/utils/symbol-utils
+  import ocdb/utils/landpatterns
+
+public pcb-bundle OpAmpSignals :
+  pin in+
+  pin in-
+  pin out
+
+public defstruct OpAmpBank :
+  in+:JITXObject
+  in-:JITXObject
+  out:JITXObject
+
+public defn mm (x:Double) -> Double :
+  UNIT-TO-MM * x
+
+public defn mm (x:Double, y:Double) -> Point :
+  Point(mm(x), mm(y))
+
+public pcb-symbol opamp-signal-sym :
+  val numSize = mm(0.3)
+  val pinLen = mm(0.5)
+
+  pin in- at mm(-1.5, -1.0) with:
+    direction = Left
+    length = pinLen
+    number-size = numSize
+
+  pin in+ at mm(-1.5, 1.0) with:
+    direction = Left
+    length = pinLen
+    number-size = numSize
+
+  pin out at mm(1.5, 0.0) with:
+    direction = Right
+    length = pinLen
+    number-size = numSize
+
+  unit-triangle("foreground", [-1.5, 0.0], [1.5, 0.0], 3.0)
+
+  val textSize = mm(0.3)
+  unit-text([-1.1, 0.8], "+", textSize)
+  unit-text([-1.1, -0.8], "-", textSize)
+
+  unit-ref([0.0, 1.5])
+  unit-val([0.0, -1.0])
+
+  preferred-orientation = PreferRotation([0, 2])
+
+
+public pcb-symbol horz-power-supply-sym :
+  val pinLen = mm(0.5)
+  val numSize = mm(0.3)
+  val nameSize = mm(0.3)
+  pin vs+ at mm(1.5, 0.0) with:
+    direction = Right
+    length = pinLen
+    number-size = numSize
+    name-size = nameSize
+
+  pin vs- at unit-point(-1.5, 0.0) with:
+    direction = Left
+    length = pinLen
+    number-size = numSize
+    name-size = nameSize
+
+  unit-rectangle("foreground", 3.0, 1.0)
+
+  unit-ref([0.5, 1.0])
+  unit-val([0.5, -0.5])
+
+  preferred-orientation = PreferRotation([0])
+
+public defn make-multi-opamp-symbols (banks:Seqable<OpAmpBank>, VCC:Pin, VEE:Pin) :
+  ; Create multiple OpAmp symbols inside
+  ;  a component
+  inside pcb-component :
+    symbol :
+      val psym = horz-power-supply-sym
+      unit(0) = psym(VCC => psym.vs+, VEE => psym.vs-)
+      for (bank in banks, i in 1 to false) do :
+        val sym = opamp-signal-sym
+        unit(i) = sym(
+          in+(bank) => sym.in+,
+          in-(bank) => sym.in-,
+          out(bank) => sym.out,
+        )
+
+public defn make-multi-opamps (numChs:Int) :
+  ; Generate the pins for a multi channel opamp.
+  ; @param numChs Number of channels. This should typically
+  ;  be something like 2 or 4 there are no limits.
+  inside pcb-component:
+    pin VCC
+    pin VEE
+
+    port amp : OpAmpSignals[1 through numChs]
+
+    for i in 1 through numChs do:
+      supports OpAmpSignals:
+        OpAmpSignals.in+ => amp[i].in+
+        OpAmpSignals.in- => amp[i].in-
+        OpAmpSignals.out => amp[i].out
+
+    val banks = to-tuple $ for i in 1 through numChs seq :
+      OpAmpBank(amp[i].in+, amp[i].in-, amp[i].out)
+
+    make-multi-opamp-symbols(banks, VCC, VEE)
+
+public defn std-dual-op-amp-pinout (fp:LandPattern) :
+  ; Tool for wiring up a landpattern for a dual op amp
+  ;  This is the usual standard pinout for an 8-pin device.
+  inside pcb-component:
+    landpattern = fp(
+      self.amp[1].out => fp.p[1], self.amp[1].in- => fp.p[2], self.amp[1].in+ => fp.p[3],
+      self.amp[2].out => fp.p[7], self.amp[2].in- => fp.p[6], self.amp[2].in+ => fp.p[5],
+      self.VCC => fp.p[8], self.VEE => fp.p[4]
+      )
+
+public defn std-quad-op-amp-pinout (fp:LandPattern) :
+  ; Tool for wiring up a landpattern for a quad op amp
+  ;  This is typically for a 14-pin package.
+  inside pcb-component:
+    landpattern = fp(
+      self.amp[1].out => fp.p[1], self.amp[1].in- => fp.p[2], self.amp[1].in+ => fp.p[3],
+      self.amp[2].out => fp.p[7], self.amp[2].in- => fp.p[6], self.amp[2].in+ => fp.p[5],
+      self.amp[3].out => fp.p[8], self.amp[3].in- => fp.p[9], self.amp[3].in+ => fp.p[10],
+      self.amp[4].out => fp.p[14], self.amp[4].in- => fp.p[13], self.amp[4].in+ => fp.p[12],
+      self.VCC => fp.p[4], self.VEE => fp.p[11]
+      )
+
+
+public pcb-component DualOpAmp :
+  ; This is an example for how to implement an opamp component
+  ;  using these tools. It isn't intended necessarily to be used
+  ;  for circuits but as a template for how to construct an
+  ;  opamp component that can integrate with the other tools in this file.
+  val numChs = 2
+  make-multi-opamps(numChs)
+  val soic = soic127p-landpattern(8)
+  std-dual-op-amp-pinout(soic)
+  reference-prefix = "U"
+
+  property(self.num-circuits) = numChs
+
+public pcb-component QuadOpAmp :
+  ; This is an example for how to implement an opamp component
+  ;  using these tools. It isn't intended necessarily to be used
+  ;  for circuits but as a template for how to construct an
+  ;  opamp component that can integrate with the other tools in this file.
+  val numChs = 4
+  make-multi-opamps(numChs)
+  val sop = sop65-landpattern(14)
+  std-quad-op-amp-pinout(sop)
+  reference-prefix = "U"
+
+  property(self.num-circuits) = numChs
+
+; An OpAmp Pool manages an instantiation of multiple opamps across multiple packages.
+;  The idea is to provide the ability for the user to structure their circuit and then
+;  use either single, dual, or quad packages as they wish to set of a packages
+public deftype OpAmpPool <: Lengthable
+public defmulti get-amp (p:OpAmpPool) -> JITXObject
+
+public defn OpAmpPool (instances:Tuple<JITXObject>) -> OpAmpPool :
+  val insts = instances
+  var pkg = 0
+  var sig = 0
+
+  new OpAmpPool:
+    defmethod get-amp (this) -> JITXObject :
+      if not ( pkg < length(insts) ):
+        fatal("Exhausted Pool of Op Amps!")
+
+      val ret = insts[pkg]
+
+      sig = sig + 1
+      if not ( sig < length(ret.amp) ):
+        pkg = pkg + 1
+        sig = 0
+
+      ret
+
+    defmethod length (this) -> Int :
+      sum(map(length{_.amp}, insts))
+
+
+; Circuit Tools
+
+public defn mk-opamp-buffer () -> Instantiable :
+  ; Create a buffer amp by wrapping the output back to the
+  ;   negative input. Returns a module that can
+  ;   instantiates this circuit.
+  pcb-module buffer :
+    port vin : pin
+    port vout : pin
+    port amp : OpAmpSignals
+
+    net (vin,  amp.in+)
+    net (      amp.out, amp.in-)
+    net (vout, amp.out)
+
+  buffer
+
+public defn mk-opamp-inverter (src-Z:ANT, fb-Z:ANT) -> Instantiable :
+  pcb-module inverter :
+    port vin : pin
+    port vout : pin
+    port vref : pin
+    port fb : pin
+    port amp : OpAmpSignals
+
+    inst src-c : make-circuit(src-Z)
+    inst fb-c : make-circuit(fb-Z)
+
+    net (vin,             src-c.p[1])
+    net (vref,   amp.in+)
+    net (fb,     amp.in-, src-c.p[2], fb-c.p[1])
+    net (vout,   amp.out,             fb-c.p[2])
+
+  inverter
+
+public defn mk-opamp-non-inverting (fb-Z:ANT, shunt-Z:ANT) -> Instantiable :
+  pcb-module non-inverter :
+    port vin : pin
+    port vout : pin
+    port vref : pin
+    port fb : pin
+    port amp : OpAmpSignals
+
+
+    inst fb-c : make-circuit(fb-Z)
+    inst shunt-c : make-circuit(shunt-Z)
+
+    net (vin,    amp.in+)
+    net (vout,   amp.out,               fb-c.p[1])
+    net (fb,     amp.in-, shunt-c.p[1], fb-c.p[2])
+    net (vref,            shunt-c.p[2])
+
+  non-inverter
